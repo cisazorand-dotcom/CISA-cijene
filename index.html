@@ -2,180 +2,134 @@
 <html lang="hr">
 <head>
     <meta charset="UTF-8">
-    <title>CISA B2B - Kalkulator i Ponuda</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <title>CISA B2B Kalkulator (Excel)</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .app-container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 900px; }
-        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .status { font-size: 0.8em; color: #d35400; margin-bottom: 10px; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .section { border: 1px solid #eee; padding: 15px; border-radius: 8px; }
-        h2, h3 { color: #1a3a5f; margin-top: 0; }
-        label { font-weight: bold; display: block; margin-top: 10px; font-size: 0.9em; }
-        select, input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        select, input { width: 100%; padding: 10px; margin-top: 5px; border-radius: 6px; border: 1px solid #ddd; }
         .btn-add { background: #27ae60; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 15px; }
-        .btn-add:hover { background: #219150; }
-        
-        /* Tabela korpe */
-        .cart-section { margin-top: 30px; background: white; padding: 20px; border-radius: 12px; width: 100%; max-width: 900px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
-        th { background: #f8f9fa; }
-        .total-row { font-size: 1.2em; font-weight: bold; text-align: right; color: #1a3a5f; margin-top: 15px; }
-        .btn-print { background: #2980b9; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; float: right; margin-top: 10px; }
+        .total { font-size: 1.5em; font-weight: bold; color: #1a3a5f; text-align: right; margin-top: 15px; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
-    <h2>CISA B2B System</h2>
-    <div id="status" style="color: #666; font-size: 0.8em; margin-bottom: 15px;">Učitavanje podataka...</div>
+    <h2>CISA Portal (Excel Live)</h2>
+    <div id="status" class="status">Povezivanje sa Excel bazom...</div>
 
-    <div class="grid-layout">
+    <div class="grid">
         <div class="section">
-            <h3>1. Identifikacija</h3>
             <label>Klijent:</label>
             <select id="clientList" onchange="calculate()"></select>
             
             <label>Pretraga artikla:</label>
-            <input type="text" id="itemSearch" placeholder="Unesite šifru ili naziv..." oninput="filterItems()">
+            <input type="text" id="itemSearch" placeholder="Kucaj šifru..." oninput="filterItems()">
             <select id="itemList" size="6" onchange="calculate()"></select>
         </div>
 
         <div class="section">
-            <h3>2. Obračun</h3>
-            <div id="calcDetails">
-                <p>Bruto cijena: <strong id="outGross">0.00</strong> €</p>
-                <p>Vaši rabati: <span id="outR1">0</span>% + <span id="outR2">0</span>%</p>
-                <label>Količina:</label>
-                <input type="number" id="qty" value="1" min="1" oninput="calculate()">
-                <div style="font-size: 1.4em; margin-top: 15px;">
-                    Neto po kom: <strong style="color: #27ae60;" id="outNetSingle">0.00 €</strong>
-                </div>
-            </div>
-            <button class="btn-add" onclick="addToCart()">DODAJ U PONUDU</button>
+            <p>Bruto: <strong id="outGross">0.00</strong> €</p>
+            <p>Rabati: <span id="outR1">0</span>% + <span id="outR2">0</span>%</p>
+            <label>Količina:</label>
+            <input type="number" id="qty" value="1" min="1" oninput="calculate()">
+            <h3 style="color: #27ae60;">Neto: <span id="outNet">0.00</span> €</h3>
+            <button class="btn-add" onclick="addToCart()">DODAJ NA PONUDU</button>
         </div>
     </div>
-</div>
 
-<div class="cart-section">
-    <h3>Vaša Ponuda / Narudžba</h3>
     <table id="cartTable">
         <thead>
-            <tr>
-                <th>Šifra</th>
-                <th>Opis</th>
-                <th>Količina</th>
-                <th>Bruto</th>
-                <th>Neto kom</th>
-                <th>Ukupno</th>
-                <th>Akcija</th>
-            </tr>
+            <tr><th>Šifra</th><th>Opis</th><th>Kol.</th><th>Neto</th><th>Ukupno</th><th></th></tr>
         </thead>
-        <tbody>
-            </tbody>
+        <tbody></tbody>
     </table>
-    <div class="total-row">UKUPNO ZA NAPLATU: <span id="cartTotal">0.00</span> €</div>
-    <button class="btn-print" onclick="generateOffer()">GENERIŠI PONUDU (PDF/Print)</button>
+    <div class="total">UKUPNO: <span id="cartTotal">0.00</span> €</div>
 </div>
 
 <script>
-    let dbPriceList = [];
-    let dbDiscounts = {};
-    let dbClients = [];
-    let cart = [];
+    let dbPrice = [], dbDisc = {}, dbClients = [], cart = [];
 
-    function loadData() {
-        // Učitavanje klijenata
-        Papa.parse("Price Calculator & Orders  Glide CISA.xlsx - Clients.csv", {
-            download: true, header: true,
-            complete: function(res) {
-                dbClients = res.data.filter(c => c.CLIENT_CODE);
-                const sel = document.getElementById('clientList');
-                sel.innerHTML = dbClients.map(c => `<option value="${c.CLIENT_CODE}">${c.CLIENT_NAME} (${c.CLIENT_CODE})</option>`).join('');
-            }
-        });
+    async function loadExcel() {
+        try {
+            // Putanja do tvog Excel fajla na GitHubu
+            const response = await fetch('baza.xlsx');
+            const data = await response.arrayBuffer();
+            const workbook = XLSX.read(data, { type: 'array' });
 
-        // Učitavanje cjenovnika
-        Papa.parse("Price Calculator & Orders  Glide CISA.xlsx - PriceLIstEUR39.csv", {
-            download: true, header: true,
-            complete: function(res) {
-                dbPriceList = res.data.filter(i => i.CODE);
-                filterItems();
-                document.getElementById('status').innerText = "✅ Sistem spreman. Podaci učitani.";
-            }
-        });
+            // 1. Čitanje klijenata (Sheet: Clients)
+            const clientSheet = workbook.Sheets["Clients"];
+            dbClients = XLSX.utils.sheet_to_json(clientSheet);
+            document.getElementById('clientList').innerHTML = dbClients.map(c => 
+                `<option value="${c.CLIENT_CODE}">${c.CLIENT_NAME}</option>`).join('');
 
-        // Učitavanje rabata
-        Papa.parse("Price Calculator & Orders  Glide CISA.xlsx - Discounts.csv", {
-            download: true, header: true,
-            complete: function(res) {
-                res.data.forEach(r => {
-                    dbDiscounts[`${r.CLIENT_CODE}-${r.FAMILY}`] = { r1: r.BASIC_DISCOUNT, r2: r.DISCOUNT_2 };
-                });
-            }
-        });
+            // 2. Čitanje cjenovnika (Sheet: PriceLIstEUR39)
+            const priceSheet = workbook.Sheets["PriceLIstEUR39"];
+            dbPrice = XLSX.utils.sheet_to_json(priceSheet);
+
+            // 3. Čitanje rabata (Sheet: Discounts)
+            const discSheet = workbook.Sheets["Discounts"];
+            const rawDisc = XLSX.utils.sheet_to_json(discSheet);
+            rawDisc.forEach(d => {
+                dbDisc[`${d.CLIENT_CODE}-${d.FAMILY}`] = { r1: d.BASIC_DISCOUNT, r2: d.DISCOUNT_2 };
+            });
+
+            document.getElementById('status').innerText = "✅ Excel baza povezana!";
+            document.getElementById('status').style.color = "green";
+            filterItems();
+        } catch (e) {
+            document.getElementById('status').innerText = "❌ Greška pri učitavanju baza.xlsx!";
+            console.error(e);
+        }
     }
 
     function filterItems() {
         const term = document.getElementById('itemSearch').value.toLowerCase();
-        const filtered = dbPriceList.filter(i => i.CODE.toLowerCase().includes(term) || i.DESCRIPTION.toLowerCase().includes(term)).slice(0, 30);
-        const sel = document.getElementById('itemList');
-        sel.innerHTML = filtered.map(i => `<option value="${i.CODE}" data-price="${i['GROSS PRICE']}" data-family="${i.FAMILY}" data-desc="${i.DESCRIPTION}">${i.CODE} - ${i.DESCRIPTION}</option>`).join('');
+        const filtered = dbPrice.filter(i => 
+            (i.CODE && i.CODE.toString().toLowerCase().includes(term)) || 
+            (i.DESCRIPTION && i.DESCRIPTION.toString().toLowerCase().includes(term))
+        ).slice(0, 20);
+        
+        document.getElementById('itemList').innerHTML = filtered.map(i => 
+            `<option value="${i.CODE}" data-price="${i['GROSS PRICE']}" data-family="${i.FAMILY}" data-desc="${i.DESCRIPTION}">${i.CODE} - ${i.DESCRIPTION}</option>`).join('');
     }
 
     function calculate() {
         const itemSel = document.getElementById('itemList');
         if (itemSel.selectedIndex === -1) return;
-        
         const opt = itemSel.options[itemSel.selectedIndex];
         const client = document.getElementById('clientList').value;
-        const family = opt.getAttribute('data-family');
-        const gross = parseFloat(opt.getAttribute('data-price'));
-        
-        const disc = dbDiscounts[`${client}-${family}`] || { r1: 50, r2: 0 };
+        const gross = parseFloat(opt.getAttribute('data-price')) || 0;
+        const disc = dbDisc[`${client}-${opt.getAttribute('data-family')}`] || { r1: 50, r2: 0 };
         const net = gross * (1 - disc.r1/100) * (1 - disc.r2/100);
 
         document.getElementById('outGross').innerText = gross.toFixed(2);
         document.getElementById('outR1').innerText = disc.r1;
         document.getElementById('outR2').innerText = disc.r2;
-        document.getElementById('outNetSingle').innerText = net.toFixed(2) + " €";
-        
-        return { code: opt.value, desc: opt.getAttribute('data-desc'), gross, net, r1: disc.r1, r2: disc.r2 };
+        document.getElementById('outNet').innerText = net.toFixed(2);
+        return { code: opt.value, desc: opt.getAttribute('data-desc'), net };
     }
 
     function addToCart() {
-        const data = calculate();
+        const res = calculate();
         const qty = parseInt(document.getElementById('qty').value);
-        if (!data) return;
-
-        cart.push({ ...data, qty, total: data.net * qty });
+        if(!res) return;
+        cart.push({ ...res, qty, total: res.net * qty });
         renderCart();
     }
 
     function renderCart() {
-        const tbody = document.querySelector('#cartTable tbody');
-        tbody.innerHTML = cart.map((item, index) => `
-            <tr>
-                <td>${item.code}</td>
-                <td>${item.desc}</td>
-                <td>${item.qty}</td>
-                <td>${item.gross.toFixed(2)}</td>
-                <td>${item.net.toFixed(2)}</td>
-                <td><strong>${item.total.toFixed(2)}</strong></td>
-                <td><button onclick="cart.splice(${index},1);renderCart()">❌</button></td>
-            </tr>
-        `).join('');
-
-        const totalSum = cart.reduce((sum, item) => sum + item.total, 0);
-        document.getElementById('cartTotal').innerText = totalSum.toFixed(2);
+        document.querySelector('#cartTable tbody').innerHTML = cart.map((i, idx) => 
+            `<tr><td>${i.code}</td><td>${i.desc}</td><td>${i.qty}</td><td>${i.net.toFixed(2)}</td><td>${i.total.toFixed(2)}</td><td style="cursor:pointer" onclick="cart.splice(${idx},1);renderCart()">❌</td></tr>`).join('');
+        document.getElementById('cartTotal').innerText = cart.reduce((s, i) => s + i.total, 0).toFixed(2);
     }
 
-    function generateOffer() {
-        window.print(); // Najjednostavniji način za PDF
-    }
-
-    window.onload = loadData;
+    window.onload = loadExcel;
 </script>
-
 </body>
 </html>
