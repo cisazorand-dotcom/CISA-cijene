@@ -16,7 +16,7 @@
         input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px; box-sizing: border-box; font-size: 16px; }
         .btn { background: var(--p); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 15px; font-size: 16px; }
         .item-list { height: 350px; overflow-y: auto; border: 1px solid #eee; margin-top: 15px; border-radius: 8px; }
-        .row { padding: 12px; border-bottom: 1px solid #f8f9fa; cursor: pointer; text-align: left; }
+        .row { padding: 12px; border-bottom: 1px solid #f8f9fa; cursor: pointer; text-align: left; transition: 0.2s; }
         .row:hover { background: #eef6ff; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
@@ -30,36 +30,38 @@
     <div id="login-page" class="login-page">
         <div class="box">
             <h3 style="color:var(--p);">CISA B2B Login</h3>
-            <div id="loading-db" class="loader">Povezivanje sa Google bazom...</div>
+            <div id="loading-db" class="loader">Učitavanje podataka...</div>
             <div id="login-form" style="display:none;">
                 <input type="text" id="uCode" placeholder="Klijentski kod">
                 <input type="password" id="uPass" placeholder="Lozinka">
                 <button class="btn" onclick="login()">PRIJAVI SE</button>
-                <p id="err" style="color:red; display:none;">Pogrešan kod ili lozinka.</p>
+                <p id="err" style="color:red; display:none; margin-top:10px;">Pogrešan kod ili lozinka.</p>
             </div>
         </div>
     </div>
 
     <div id="app">
         <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-            <div>Prijavljeni ste kao: <strong id="userDisplay"></strong></div>
-            <button onclick="location.reload()" style="background:none; border:none; color:red; cursor:pointer;">Odjava</button>
+            <div>Dobrodošli: <strong id="userDisplay" style="color:var(--p);"></strong></div>
+            <button onclick="location.reload()" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold;">Odjava</button>
         </div>
 
         <div class="grid">
             <div class="card">
                 <h3>Pretraga artikala</h3>
-                <input type="text" id="search" placeholder="Šifra ili naziv..." oninput="srch()">
+                <input type="text" id="search" placeholder="Unesite šifru..." oninput="srch()">
                 <div id="list" class="item-list"></div>
             </div>
 
             <div class="card">
-                <h3>Obračun</h3>
-                <div id="selName" style="font-weight:bold;">Odaberite artikal...</div>
+                <h3>Obračun cijene</h3>
+                <div id="selName" style="font-weight:bold; min-height:40px;">Odaberite artikal iz liste...</div>
                 <div id="calcArea" style="display:none; margin-top:15px;">
-                    <p>Bruto: <span id="resGross">0.00</span> €</p>
-                    <p>Vaši rabati: <span id="resDisc" style="color:var(--s);">0% + 0%</span></p>
-                    <div style="font-size:28px; color:var(--s); font-weight:bold;" id="selPrice">0.00 €</div>
+                    <p>Bruto cijena: <span id="resGross">0.00</span> €</p>
+                    <p>Vaši rabati: <span id="resDisc" style="color:var(--s); font-weight:bold;">0% + 0%</span></p>
+                    <hr>
+                    <div style="font-size:32px; color:var(--s); font-weight:bold; margin:15px 0;" id="selPrice">0.00 €</div>
+                    <label>Količina:</label>
                     <input type="number" id="qty" value="1" min="1" oninput="calc()">
                     <button class="btn" style="background:var(--s);" onclick="add()">DODAJ NA PONUDU</button>
                 </div>
@@ -67,17 +69,19 @@
         </div>
 
         <div class="card">
-            <h3>Vaša Ponuda</h3>
-            <table>
-                <thead><tr><th>Šifra</th><th>Kol.</th><th>Neto</th><th>Ukupno</th><th></th></tr></thead>
-                <tbody id="cart"></tbody>
-            </table>
+            <h3>Vaša Ponuda / Kalkulacija</h3>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Šifra</th><th>Količina</th><th>Neto kom</th><th>Ukupno</th><th></th></tr></thead>
+                    <tbody id="cart"></tbody>
+                </table>
+            </div>
             <div class="total-area">UKUPNO: <span id="grand">0.00</span> €</div>
         </div>
     </div>
 
 <script>
-    const SHEETS_URL = "https://script.google.com/macros/s/AKfycbzgExhJaKJtJTy6Q5wZIfs-fw6WpOGr1LIARRR2ZAnGW69cqp6Eh_w09t4FM64H7xG7/exec";
+    const SHEETS_URL = "https://script.google.com/macros/s/AKfycbxpYZHBUVGtUPvfJg9pHO14TCXt5da5htFVvQWAm3kYUX6_tbJuAP5kCbV8yfsK6c_f/exec";
     const BRUTO_URL = "CISA Bruto cijene 2026.xlsx - PriceLIstEUR39.csv";
     
     let db = { clients: [], items: [], discounts: {} }, curU = null, selI = null, cart = [];
@@ -91,7 +95,7 @@
 
             db.clients = formatData(resC);
             formatData(resD).forEach(x => {
-                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { r1: x.DISCOUNT1, r2: x.DISCOUNT2 };
+                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { r1: x.DISCOUNT1 || 0, r2: x.DISCOUNT2 || 0 };
             });
 
             Papa.parse(BRUTO_URL, {
@@ -104,7 +108,7 @@
             });
         } catch (e) {
             console.error(e);
-            document.getElementById('loading-db').innerText = "Greška u bazi!";
+            document.getElementById('loading-db').innerText = "Greška pri učitavanju baze!";
         }
     }
 
@@ -116,8 +120,8 @@
     }
 
     function login() {
-        const c = document.getElementById('uCode').value;
-        const p = document.getElementById('uPass').value;
+        const c = document.getElementById('uCode').value.trim();
+        const p = document.getElementById('uPass').value.trim();
         const u = db.clients.find(x => x.CLIENT_CODE.toString() == c && x.PASSWORD.toString() == p);
         if(u) {
             curU = u;
@@ -129,6 +133,7 @@
 
     function srch() {
         const t = document.getElementById('search').value.toLowerCase();
+        if(t.length < 2) return;
         const f = db.items.filter(x => x.CODE && x.CODE.toString().toLowerCase().includes(t)).slice(0, 20);
         document.getElementById('list').innerHTML = f.map(x => `
             <div class="row" onclick="pick('${x.CODE}')">
