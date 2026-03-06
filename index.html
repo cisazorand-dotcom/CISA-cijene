@@ -133,8 +133,15 @@
     </div>
 
 <script>
-    const FILES = { clients: 'baza_Clients.csv', discounts: 'baza_Discounts.csv', prices: 'baza_PriceListEUR39.csv' };
-    let db = { clients: [], items: [], discounts: {} }, curU = null, selI = null, cart = [], curLang = 'sr';
+    // DODAT KORAK 1: Generalni rabati
+    const FILES = { 
+        clients: 'baza_Clients.csv', 
+        discounts: 'baza_Discounts.csv', 
+        prices: 'baza_PriceListEUR39.csv',
+        general: 'baza_GeneralDiscounts.csv' 
+    };
+    
+    let db = { clients: [], items: [], discounts: {}, generalDiscounts: {} }, curU = null, selI = null, cart = [], curLang = 'sr';
 
     const translations = {
         sr: {
@@ -215,27 +222,38 @@
         document.getElementById('selName').innerText = translations[curLang].selPh;
         document.getElementById('qty').value = 1;
         selI = null;
-        document.getElementById('search').focus(); // Vrati fokus na pretragu za sledeći kucanje
+        document.getElementById('search').focus();
     }
 
     function clearCart() { if(confirm("Isprazniti cijelu ponudu?")) { cart = []; renderCart(); } }
 
     async function init() {
         try {
-            const [cR, dR, pR] = await Promise.all([
+            // Učitavanje sve 4 baze
+            const [cR, dR, pR, gR] = await Promise.all([
                 fetch(FILES.clients).then(r=>r.text()), 
                 fetch(FILES.discounts).then(r=>r.text()), 
-                fetch(FILES.prices).then(r=>r.text())
+                fetch(FILES.prices).then(r=>r.text()),
+                fetch(FILES.general).then(r=>r.text())
             ]);
+            
             db.clients = Papa.parse(cR, {header:true, skipEmptyLines:true}).data;
+            
+            // Parsiranje specifičnih rabata
             Papa.parse(dR, {header:true, skipEmptyLines:true}).data.forEach(x => {
                 db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { r1: parseFloat(x.BASIC_DISCOUNT)||0, r2: parseFloat(x.DISCOUNT_2)||0 };
             });
+
+            // Parsiranje generalnih rabata
+            Papa.parse(gR, {header:true, skipEmptyLines:true}).data.forEach(x => {
+                db.generalDiscounts[x.FAMILY] = { r1: parseFloat(x.BASIC_DISCOUNT)||0, r2: parseFloat(x.DISCOUNT_2)||0 };
+            });
+
             db.items = Papa.parse(pR, {header:true, skipEmptyLines:true}).data;
             document.getElementById('status').style.display = 'none';
             document.getElementById('login-form').style.display = 'block';
             updateUI();
-        } catch (e) { document.getElementById('status').innerText = "Greška u učitavanju baze!"; }
+        } catch (e) { document.getElementById('status').innerText = "Greška u učitavanju baza!"; }
     }
 
     function login() {
@@ -270,17 +288,22 @@
         document.getElementById('calcArea').style.display = 'block';
         document.getElementById('list').innerHTML = '';
         calc();
-        document.getElementById('qty').focus(); // Fokus na količinu odmah
+        document.getElementById('qty').focus();
     }
 
     function calc() {
         let raw = selI['GROSS PRICE'] ? selI['GROSS PRICE'].toString().replace(/[^\d,.]/g, '').replace(',', '.') : "0";
         const g = parseFloat(raw) || 0;
         
-        // Tražimo popust u bazi
+        // 1. Nivo: Specifični popust
         let d = db.discounts[`${curU.CLIENT_CODE}-${selI.FAMILY}`];
         
-        // AKO NE POSTOJI U BAZI, POSTAVLJAMO DEFAULT 50% + 0%
+        // 2. Nivo: Generalni popust za familiju
+        if (!d) {
+            d = db.generalDiscounts[selI.FAMILY];
+        }
+        
+        // 3. Nivo: Default 50%
         if (!d) {
             d = { r1: 50, r2: 0 };
         }
@@ -334,39 +357,24 @@
 
     function exportPDF() {
         const { jsPDF } = window.jspdf;
-        // Koristimo landscape za širinu, jedinica je milimetar (mm)
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }); 
-        
         const t = translations[curLang];
-        const dateStr = new Date().toLocaleDateString('sr-RS'); // Format datuma za našu regiju
-        
-        // --- POPRAVKA LOGO-A ---
+        const dateStr = new Date().toLocaleDateString('sr-RS'); 
         const img = document.getElementById('pdfLogoSource');
+        
         if (img && img.complete && img.naturalWidth > 0) {
-            // Izračunavamo proporcije originalne slike
-            const originalWidth = img.naturalWidth;
-            const originalHeight = img.naturalHeight;
-            const aspectRatio = originalWidth / originalHeight;
-
-            // Zidamo fiksnu ŠIRINU logotipa u PDF-u (npr. 45mm je dobra mjera)
+            const aspectRatio = img.naturalWidth / img.naturalHeight;
             const pdfImgWidth = 45; 
-            // VISINU računamo automatski da sačuvamo proporcije (neće biti uzak)
             const pdfImgHeight = pdfImgWidth / aspectRatio; 
-            
-            // Postavljamo logo na poziciju X=14, Y=10
             doc.addImage(img, 'JPEG', 14, 10, pdfImgWidth, pdfImgHeight);
-            
-            // Pomjeramo početak teksta ispod logotipa, zavisno od njegove visine
             var textStartY = 10 + pdfImgHeight + 10; 
         } else {
-            // Ako nema logotipa, tekst kreće standardno
             var textStartY = 20;
         }
 
-        // --- NASLOV I PODACI ---
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
-        doc.setTextColor(26, 58, 95); // CISA plava
+        doc.setTextColor(26, 58, 95); 
         doc.text(t.pdfTitle, 14, textStartY);
 
         doc.setFont("helvetica", "normal");
@@ -375,58 +383,42 @@
         doc.text(`${t.pdfDate}: ${dateStr}`, 14, textStartY + 8);
         doc.text(`${t.pdfClient}: ${curU.CLIENT_NAME} (${curU.CLIENT_CODE})`, 14, textStartY + 13);
 
-        // --- TABELA ---
-        // Ključni dio za slova č,ć,š... u tabeli:
         doc.autoTable({
-            startY: textStartY + 18, // Početak tabele zavisi od visine logotipa
+            startY: textStartY + 18,
             head: [[t.thCode, t.thDesc, t.thFam, t.thBruto, t.thR1, t.thR2, t.thQty, t.thTotal]],
             body: cart.map(x => [
-                x.code, 
-                x.desc, 
-                x.family, 
-                x.gross.toFixed(2) + " €", 
-                x.r1 + "%", 
-                x.r2 + "%", 
-                x.qty, 
-                x.total.toFixed(2) + " €"
+                x.code, x.desc, x.family, x.gross.toFixed(2) + " €", 
+                x.r1 + "%", x.r2 + "%", x.qty, x.total.toFixed(2) + " €"
             ]),
             foot: [['', '', '', '', '', '', t.grandTotal + ":", document.getElementById('grand').innerText + " €"]],
-            styles: { font: "helvetica", fontStyle: "normal" }, // Osigurava font u ćelijama
-            headStyles: { fillColor: [26, 58, 95], fontSize: 9, halign: 'center' }, // Centrirano zaglavlje
+            styles: { font: "helvetica", fontStyle: "normal" },
+            headStyles: { fillColor: [26, 58, 95], fontSize: 9, halign: 'center' },
             columnStyles: { 
-                1: { cellWidth: 80 }, // Opis najširi
-                3: { halign: 'right' }, // Cijene desno poravnate
-                4: { halign: 'center' }, // Rabati centrirani
+                1: { cellWidth: 80 },
+                3: { halign: 'right' },
+                4: { halign: 'center' },
                 5: { halign: 'center' },
-                6: { halign: 'center' }, // Količina centrirana
-                7: { halign: 'right', fontStyle: 'bold' } // Ukupno desno i bold
+                6: { halign: 'center' },
+                7: { halign: 'right', fontStyle: 'bold' }
             },
-            // Footer na svakoj stranici
             didDrawPage: function (data) {
                 doc.setFontSize(8);
                 doc.setTextColor(100);
                 const footerTxt = "Kontakt osoba: Zoran Dragojevic, Agent & Technical Consultant for Balkans ; cisa.zoran.d@gmail.com ; +387 65 363 063";
-                const pageSize = doc.internal.pageSize;
-                const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth();
-                const textWidth = doc.getTextWidth(footerTxt);
-                const xOffset = (pageWidth - textWidth) / 2;
-                doc.text(footerTxt, xOffset, pageSize.height - 10);
+                const pageWidth = doc.internal.pageSize.width;
+                doc.text(footerTxt, pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' });
             }
         });
 
-        // --- NAPOMENA ISPOD TABELE ---
         const nTxt = document.getElementById('napomena').value;
         if(nTxt) {
             doc.setFontSize(10);
-            doc.setTextColor(50);
             doc.text(t.noteLabel, 14, doc.lastAutoTable.finalY + 10);
-            const splitNote = doc.splitTextToSize(nTxt, 260); // Prilagođeno landscape širini
-            doc.text(splitNote, 14, doc.lastAutoTable.finalY + 17);
+            doc.text(doc.splitTextToSize(nTxt, 260), 14, doc.lastAutoTable.finalY + 17);
         }
-        
-        // Snimanje fajla
         doc.save(`Ponuda_${curU.CLIENT_CODE}.pdf`);
     }
+
     function exportCSV() {
         let csv = "\ufeff" + `Client: ${curU.CLIENT_NAME}\nDate: ${new Date().toLocaleDateString()}\n\nCode,Description,Family,Gross,R1,R2,Qty,Total\n`;
         cart.forEach(x => { csv += `"${x.code}","${x.desc}","${x.family}",${x.gross.toFixed(2)},${x.r1},${x.r2},${x.qty},${x.total.toFixed(2)}\n`; });
