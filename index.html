@@ -30,7 +30,7 @@
         th, td { padding: 15px; border-bottom: 1px solid #eee; }
         .total-area { text-align: right; font-size: 28px; font-weight: bold; color: var(--p); padding: 25px 0; }
         .logo-img { width: 160px; margin-bottom: 20px; }
-        .loader { color: #888; font-size: 14px; margin-top: 15px; }
+        .loader { color: #888; font-size: 14px; margin-top: 15px; padding: 10px; background: #fffbe6; border-radius: 5px; }
         @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -38,7 +38,7 @@
 
     <div id="login-page" class="login-page">
         <div class="box">
-            <img src="CISA logo.JPG" class="logo-img" alt="CISA Logo">
+            <img src="CISA logo.JPG" class="logo-img" alt="CISA Logo" onerror="this.src='https://www.cisa.com/content/dam/cisa/logos/cisa-logo.png'">
             <h3 style="color:var(--p); margin-top:0;">B2B Klijentski Portal</h3>
             <div id="status" class="loader">Učitavanje baza podataka...</div>
             <div id="login-form" style="display:none;">
@@ -105,7 +105,7 @@
             
             <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
                 <label style="font-size: 14px; font-weight: bold; color: var(--p); display: block;">DODATNA NAPOMENA:</label>
-                <textarea id="napomena" rows="3" placeholder="Unesite dodatne informacije..."></textarea>
+                <textarea id="napomena" rows="3" placeholder="Unesite rok isporuke, način plaćanja ili druge detalje..."></textarea>
             </div>
         </div>
     </div>
@@ -119,14 +119,12 @@
 
     let db = { clients: [], items: [], discounts: {} }, curU = null, selI = null, cart = [];
 
-    async function init() {
-        try {
-            const [cRes, dRes, pRes] = await Promise.all([
-                fetch(FILES.clients).then(r => r.text()),
-                fetch(FILES.discounts).then(r => r.text()),
-                fetch(FILES.prices).then(r => r.text())
-            ]);
+    // OVDJE UPIŠI SVOJE PODATKE
+    const MOJI_KONTAKTI = {
+        tel: "+387 61 123 456", // Primjer
+        email: "info@cisa-bih.com", // Primjer
+        web: "www.cisa.com"
+    };
 
-            db.clients = Papa.parse(cRes, { header: true, skipEmptyLines: true }).data;
-            Papa.parse(dRes, { header: true, skipEmptyLines: true }).data.forEach(x => {
-                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] =
+    async function init() {
+        const statusEl = document.
