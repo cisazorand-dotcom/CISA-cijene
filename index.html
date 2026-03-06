@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="hr">
+<html lang="sr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +12,7 @@
         :root { --p: #1a3a5f; --s: #27ae60; --bg: #f4f7f9; --accent: #e67e22; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; }
         .login-page { height: 100vh; display: flex; align-items: center; justify-content: center; width: 100%; }
-        .box { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        .box { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 380px; text-align: center; }
         #app { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .grid { display: grid; grid-template-columns: 1fr 400px; gap: 20px; }
@@ -22,15 +22,18 @@
         .btn-s { background: var(--s); }
         .btn-a { background: var(--accent); }
         .btn:hover { opacity: 0.9; transform: translateY(-2px); }
+        .lang-switch { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+        .lang-btn { padding: 6px 15px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; background: #f8f9fa; font-weight: bold; font-size: 13px; transition: 0.2s; }
+        .lang-btn.active { background: var(--p); color: white; border-color: var(--p); }
         .item-list { height: 400px; overflow-y: auto; border: 1px solid #eee; margin-top: 15px; border-radius: 8px; }
         .row { padding: 15px; border-bottom: 1px solid #f1f1f1; cursor: pointer; text-align: left; }
         .row:hover { background: #f0f7ff; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: #f8f9fa; color: var(--p); text-align: left; }
-        th, td { padding: 15px; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: var(--p); text-align: left; padding: 15px; border-bottom: 1px solid #eee; }
+        td { padding: 15px; border-bottom: 1px solid #eee; }
         .total-area { text-align: right; font-size: 28px; font-weight: bold; color: var(--p); padding: 25px 0; }
         .logo-img { width: 160px; margin-bottom: 20px; }
-        .loader { color: #888; font-size: 14px; margin-top: 15px; padding: 10px; background: #fffbe6; border-radius: 5px; }
+        .loader { color: #888; font-size: 14px; margin-top: 15px; }
         @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -38,174 +41,180 @@
 
     <div id="login-page" class="login-page">
         <div class="box">
-            <img src="CISA logo.JPG" class="logo-img" alt="CISA Logo" onerror="this.src='https://www.cisa.com/content/dam/cisa/logos/cisa-logo.png'">
-            <h3 style="color:var(--p); margin-top:0;">B2B Klijentski Portal</h3>
-            <div id="status" class="loader">Učitavanje baza podataka...</div>
+            <img src="CISA logo.JPG" class="logo-img" alt="CISA Logo">
+            <div class="lang-switch">
+                <div class="lang-btn active" id="btn-sr" onclick="setLang('sr')">SRB</div>
+                <div class="lang-btn" id="btn-en" onclick="setLang('en')">ENG</div>
+                <div class="lang-btn" id="btn-it" onclick="setLang('it')">ITA</div>
+            </div>
+            <h3 id="t-welcome" style="color:var(--p); margin-top:0;">B2B Klijentski Portal</h3>
+            <div id="status" class="loader">Učitavanje podataka...</div>
             <div id="login-form" style="display:none;">
-                <input type="text" id="uCode" placeholder="Klijentski kod">
+                <input type="text" id="uCode" placeholder="Kod klijenta">
                 <input type="password" id="uPass" placeholder="Lozinka">
-                <button class="btn btn-p" onclick="login()">PRIJAVI SE</button>
-                <p id="err" style="color:red; display:none; margin-top:15px; font-size:14px;">Pogrešni podaci za prijavu.</p>
+                <button class="btn btn-p" id="t-loginBtn" onclick="login()">PRIJAVI SE</button>
+                <p id="err" style="color:red; display:none; margin-top:15px; font-size:14px;">Pogrešni podaci.</p>
             </div>
         </div>
     </div>
 
     <div id="app">
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; border-left: 5px solid var(--p);">
-            <div>Prijavljeni ste kao: <strong id="userDisplay" style="color:var(--p);"></strong></div>
-            <button onclick="logout()" style="background:none; border:none; color:#c0392b; cursor:pointer; font-weight:bold; font-size:14px;">ODJAVA ✕</button>
+            <div><span id="t-loggedAs">Prijavljeni ste kao:</span> <strong id="userDisplay" style="color:var(--p);"></strong></div>
+            <button onclick="logout()" id="t-logout" style="background:none; border:none; color:#c0392b; cursor:pointer; font-weight:bold; font-size:14px;">ODJAVA ✕</button>
         </div>
 
         <div class="grid">
             <div class="card">
-                <h3>Pretraga artikala</h3>
-                <input type="text" id="search" placeholder="Unesite šifru ili opis artikla..." oninput="srch()">
+                <h3 id="t-searchTitle">Pretraga artikala</h3>
+                <input type="text" id="search" placeholder="..." oninput="srch()">
                 <div id="list" class="item-list"></div>
             </div>
 
             <div class="card">
-                <h3>Obračun cijene</h3>
-                <div id="selName" style="font-weight:bold; min-height:50px; color:var(--p); font-size:18px;">Odaberite artikal iz liste...</div>
+                <h3 id="t-calcTitle">Obračun cene</h3>
+                <div id="selName" style="font-weight:bold; min-height:50px; color:var(--p); font-size:18px;">...</div>
                 <div id="calcArea" style="display:none; margin-top:20px; background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
-                    <p>Bruto cijena: <span id="resGross" style="font-weight:bold;">0.00</span> €</p>
-                    <p>Vaši rabati: <span id="resDisc" style="color:var(--s); font-weight:bold;">0% + 0%</span></p>
+                    <p><span id="t-gross">Bruto cena</span>: <span id="resGross" style="font-weight:bold;">0.00</span> €</p>
+                    <p><span id="t-disc">Vaši rabati</span>: <span id="resDisc" style="color:var(--s); font-weight:bold;">0% + 0%</span></p>
                     <hr>
                     <div style="font-size:36px; color:var(--s); font-weight:bold; margin:15px 0;" id="selPrice">0.00 €</div>
-                    <label style="font-size:14px; color:#666;">Količina za ponudu:</label>
+                    <label id="t-qtyLabel" style="font-size:14px; color:#666;">Količina:</label>
                     <input type="number" id="qty" value="1" min="1" oninput="calc()">
-                    <button class="btn btn-s" onclick="add()">DODAJ NA PONUDU</button>
+                    <button class="btn btn-s" id="t-addBtn" onclick="add()">DODAJ NA PONUDU</button>
                 </div>
             </div>
         </div>
 
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Vaša Narudžba / Specifikacija</h3>
+                <h3 id="t-offerTitle">Vaša Ponuda</h3>
                 <div style="display:flex; gap:10px;">
                     <button class="btn btn-a" style="margin:0; width:auto; padding: 10px 20px;" onclick="exportPDF()">EXPORT PDF</button>
                     <button class="btn btn-p" style="margin:0; width:auto; padding: 10px 20px; background:#34495e;" onclick="exportCSV()">EXPORT EXCEL</button>
                 </div>
             </div>
             <div style="overflow-x:auto;">
-                <table id="offerTable">
+                <table>
                     <thead>
                         <tr>
-                            <th>Šifra artikla</th>
-                            <th>Količina</th>
-                            <th>Neto (kom)</th>
-                            <th>Ukupno</th>
+                            <th id="th-code">Šifra</th>
+                            <th id="th-qty">Količina</th>
+                            <th id="th-neto">Neto (kom)</th>
+                            <th id="th-total">Ukupno</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody id="cart"></tbody>
                 </table>
             </div>
-            
-            <div class="total-area">UKUPNO: <span id="grand">0.00</span> €</div>
+            <div class="total-area"><span id="t-grandTotal">UKUPNO</span>: <span id="grand">0.00</span> €</div>
             
             <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
-                <label style="font-size: 14px; font-weight: bold; color: var(--p); display: block;">DODATNA NAPOMENA:</label>
-                <textarea id="napomena" rows="3" placeholder="Unesite rok isporuke, način plaćanja ili druge detalje..."></textarea>
+                <label id="t-noteLabel" style="font-size: 13px; font-weight: bold; color: var(--p); display: block;">NAPOMENA:</label>
+                <textarea id="napomena" rows="2"></textarea>
             </div>
         </div>
     </div>
 
 <script>
-    const FILES = {
-        clients: 'baza_Clients.csv',
-        discounts: 'baza_Discounts.csv',
-        prices: 'baza_PriceListEUR39.csv'
+    const FILES = { clients: 'baza_Clients.csv', discounts: 'baza_Discounts.csv', prices: 'baza_PriceListEUR39.csv' };
+    let db = { clients: [], items: [], discounts: {} }, curU = null, selI = null, cart = [], curLang = 'sr';
+
+    const translations = {
+        sr: {
+            welcome: "B2B Klijentski Portal", loginBtn: "PRIJAVI SE", loggedAs: "Prijavljeni ste kao:", logout: "ODJAVA ✕",
+            searchTitle: "Pretraga artikala", searchPh: "Unesite šifru ili opis...", calcTitle: "Obračun cene",
+            gross: "Bruto cena", disc: "Vaši rabati", qtyLabel: "Količina za ponudu:", addBtn: "DODAJ NA PONUDU",
+            offerTitle: "Vaša Ponuda / Specifikacija", thCode: "Šifra artikla", thQty: "Količina", thNeto: "Neto kom",
+            thTotal: "Ukupno", grandTotal: "UKUPNO", noteLabel: "NAPOMENA:", selPh: "Odaberite artikal iz liste...",
+            pdfTitle: "CISA B2B PONUDA", pdfClient: "Klijent", pdfCode: "Kod klijenta", pdfDate: "Datum"
+        },
+        en: {
+            welcome: "B2B Client Portal", loginBtn: "LOGIN", loggedAs: "Logged in as:", logout: "LOGOUT ✕",
+            searchTitle: "Product Search", searchPh: "Enter code or description...", calcTitle: "Price Calculation",
+            gross: "Gross Price", disc: "Your Discounts", qtyLabel: "Quantity for offer:", addBtn: "ADD TO OFFER",
+            offerTitle: "Your Offer / Specification", thCode: "Item Code", thQty: "Quantity", thNeto: "Net Price",
+            thTotal: "Total", grandTotal: "GRAND TOTAL", noteLabel: "NOTES:", selPh: "Select item from list...",
+            pdfTitle: "CISA B2B QUOTATION", pdfClient: "Client", pdfCode: "Client Code", pdfDate: "Date"
+        },
+        it: {
+            welcome: "Portale Clienti B2B", loginBtn: "ACCEDI", loggedAs: "Accesso effettuato come:", logout: "LOGOUT ✕",
+            searchTitle: "Ricerca Prodotti", searchPh: "Inserisci codice o descrizione...", calcTitle: "Calcolo Prezzo",
+            gross: "Prezzo Lordo", disc: "I Tuoi Sconti", qtyLabel: "Quantità per offerta:", addBtn: "AGGIUNGI ALL'OFFERTA",
+            offerTitle: "Tua Offerta / Specifica", thCode: "Codice Articolo", thQty: "Quantità", thNeto: "Prezzo Netto",
+            thTotal: "Totale", grandTotal: "TOTALE GENERALE", noteLabel: "NOTE:", selPh: "Seleziona un articolo...",
+            pdfTitle: "CISA B2B PREVENTIVO", pdfClient: "Cliente", pdfCode: "Codice Cliente", pdfDate: "Data"
+        }
     };
 
-    let db = { clients: [], items: [], discounts: {} }, curU = null, selI = null, cart = [];
+    function setLang(l) {
+        curLang = l;
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + l).classList.add('active');
+        updateUI();
+    }
 
-    // OVDJE UPIŠI SVOJE PODATKE
-    const MOJI_KONTAKTI = {
-        tel: "+387 65 363 063", // Primjer
-        email: "cisa.zoran.d@gmail.com", // Primjer
-        web: "www.cisa.com"
-    };
+    function updateUI() {
+        const t = translations[curLang];
+        document.getElementById('t-welcome').innerText = t.welcome;
+        document.getElementById('t-loginBtn').innerText = t.loginBtn;
+        document.getElementById('t-loggedAs').innerText = t.loggedAs;
+        document.getElementById('t-logout').innerText = t.logout;
+        document.getElementById('t-searchTitle').innerText = t.searchTitle;
+        document.getElementById('search').placeholder = t.searchPh;
+        document.getElementById('t-calcTitle').innerText = t.calcTitle;
+        if(!selI) document.getElementById('selName').innerText = t.selPh;
+        document.getElementById('t-gross').innerText = t.gross;
+        document.getElementById('t-disc').innerText = t.disc;
+        document.getElementById('t-qtyLabel').innerText = t.qtyLabel;
+        document.getElementById('t-addBtn').innerText = t.addBtn;
+        document.getElementById('t-offerTitle').innerText = t.offerTitle;
+        document.getElementById('th-code').innerText = t.thCode;
+        document.getElementById('th-qty').innerText = t.thQty;
+        document.getElementById('th-neto').innerText = t.thNeto;
+        document.getElementById('th-total').innerText = t.thTotal;
+        document.getElementById('t-grandTotal').innerText = t.grandTotal;
+        document.getElementById('t-noteLabel').innerText = t.noteLabel;
+    }
 
     async function init() {
-        const statusEl = document.getElementById('status');
         try {
-            const fetchFile = async (url) => {
-                const r = await fetch(url);
-                if (!r.ok) throw new Error(`Fajl nije pronađen: ${url}`);
-                return await r.text();
-            };
-
-            const [cRes, dRes, pRes] = await Promise.all([
-                fetchFile(FILES.clients),
-                fetchFile(FILES.discounts),
-                fetchFile(FILES.prices)
-            ]);
-
-            db.clients = Papa.parse(cRes, { header: true, skipEmptyLines: true }).data;
-            Papa.parse(dRes, { header: true, skipEmptyLines: true }).data.forEach(x => {
-                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { 
-                    r1: parseFloat(x.BASIC_DISCOUNT) || 0, 
-                    r2: parseFloat(x.DISCOUNT_2) || 0 
-                };
+            const [cR, dR, pR] = await Promise.all([fetch(FILES.clients).then(r=>r.text()), fetch(FILES.discounts).then(r=>r.text()), fetch(FILES.prices).then(r=>r.text())]);
+            db.clients = Papa.parse(cR, {header:true, skipEmptyLines:true}).data;
+            Papa.parse(dR, {header:true, skipEmptyLines:true}).data.forEach(x => {
+                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { r1: parseFloat(x.BASIC_DISCOUNT)||0, r2: parseFloat(x.DISCOUNT_2)||0 };
             });
-            db.items = Papa.parse(pRes, { header: true, skipEmptyLines: true }).data;
-
-            statusEl.style.display = 'none';
+            db.items = Papa.parse(pR, {header:true, skipEmptyLines:true}).data;
+            document.getElementById('status').style.display = 'none';
             document.getElementById('login-form').style.display = 'block';
-        } catch (e) {
-            statusEl.innerText = "Greška pri učitavanju! Provjerite da li su CSV fajlovi u istom folderu.";
-            statusEl.style.background = "#fff0f0";
-            statusEl.style.color = "red";
-            console.error(e);
-        }
+            updateUI();
+        } catch (e) { document.getElementById('status').innerText = "Greška u učitavanju baza!"; }
     }
 
     function login() {
-        const c = document.getElementById('uCode').value.trim();
-        const p = document.getElementById('uPass').value.trim();
+        const c = document.getElementById('uCode').value.trim(), p = document.getElementById('uPass').value.trim();
         const u = db.clients.find(x => x.CLIENT_CODE == c && x.PASSWORD == p);
         if(u) {
-            curU = u;
-            document.getElementById('login-page').style.display = 'none';
+            curU = u; document.getElementById('login-page').style.display = 'none';
             document.getElementById('app').style.display = 'block';
             document.getElementById('userDisplay').innerText = `${u.CLIENT_NAME} (${u.CLIENT_CODE})`;
-        } else { 
-            document.getElementById('err').style.display = 'block'; 
-        }
+        } else { document.getElementById('err').style.display = 'block'; }
     }
 
     function logout() {
-        curU = null; 
-        cart = []; 
-        renderCart();
-        
-        // Brišemo tekst iz polja za pretragu
-        document.getElementById('search').value = '';
-        // Praznimo listu rezultata pretrage
-        document.getElementById('list').innerHTML = '';
-        // Sakrivamo kalkulator ako je bio otvoren
+        curU = null; cart = []; renderCart();
+        document.getElementById('search').value = ''; document.getElementById('list').innerHTML = '';
         document.getElementById('calcArea').style.display = 'none';
-        
-        document.getElementById('uCode').value = '';
-        document.getElementById('uPass').value = '';
-        document.getElementById('napomena').value = '';
-        document.getElementById('app').style.display = 'none';
-        document.getElementById('login-page').style.display = 'flex';
-        document.getElementById('err').style.display = 'none';
+        document.getElementById('uCode').value = ''; document.getElementById('uPass').value = '';
+        document.getElementById('app').style.display = 'none'; document.getElementById('login-page').style.display = 'flex';
     }
 
     function srch() {
         const t = document.getElementById('search').value.toLowerCase();
         if(t.length < 2) { document.getElementById('list').innerHTML = ''; return; }
-        const f = db.items.filter(x => 
-            (x.CODE && x.CODE.toString().toLowerCase().includes(t)) || 
-            (x.DESCRIPTION && x.DESCRIPTION.toLowerCase().includes(t))
-        ).slice(0, 30);
-        document.getElementById('list').innerHTML = f.map(x => `
-            <div class="row" onclick="pick('${x.CODE}')">
-                <strong>${x.CODE}</strong><br><small>${x.DESCRIPTION}</small>
-            </div>
-        `).join('');
+        const f = db.items.filter(x => (x.CODE && x.CODE.toString().toLowerCase().includes(t)) || (x.DESCRIPTION && x.DESCRIPTION.toLowerCase().includes(t))).slice(0, 30);
+        document.getElementById('list').innerHTML = f.map(x => `<div class="row" onclick="pick('${x.CODE}')"><strong>${x.CODE}</strong><br><small>${x.DESCRIPTION}</small></div>`).join('');
     }
 
     function pick(code) {
@@ -216,9 +225,8 @@
     }
 
     function calc() {
-        let rawPrice = selI['GROSS PRICE'] ? selI['GROSS PRICE'].toString().replace(/[^\d,.]/g, '').replace(',', '.') : "0";
-        const g = parseFloat(rawPrice) || 0;
-        const d = db.discounts[`${curU.CLIENT_CODE}-${selI.FAMILY}`] || {r1:0, r2:0};
+        let raw = selI['GROSS PRICE'] ? selI['GROSS PRICE'].toString().replace(/[^\d,.]/g, '').replace(',', '.') : "0";
+        const g = parseFloat(raw) || 0, d = db.discounts[`${curU.CLIENT_CODE}-${selI.FAMILY}`] || {r1:0, r2:0};
         const n = g * (1 - d.r1/100) * (1 - d.r2/100);
         document.getElementById('resGross').innerText = g.toFixed(2);
         document.getElementById('resDisc').innerText = `${d.r1}% + ${d.r2}%`;
@@ -227,82 +235,48 @@
     }
 
     function add() {
-        const n = calc();
-        const q = parseInt(document.getElementById('qty').value) || 1;
+        const n = calc(), q = parseInt(document.getElementById('qty').value) || 1;
         cart.push({ code: selI.CODE, desc: selI.DESCRIPTION, qty: q, neto: n, total: n*q });
         renderCart();
     }
 
     function renderCart() {
-        document.getElementById('cart').innerHTML = cart.map((x,i) => `
-            <tr>
-                <td><strong>${x.code}</strong><br><small>${x.desc}</small></td>
-                <td>${x.qty}</td>
-                <td>${x.neto.toFixed(2)} €</td>
-                <td style="font-weight:bold;">${x.total.toFixed(2)} €</td>
-                <td onclick="cart.splice(${i},1);renderCart()" style="color:red;cursor:pointer;">✕</td>
-            </tr>
-        `).join('');
+        document.getElementById('cart').innerHTML = cart.map((x,i) => `<tr><td><strong>${x.code}</strong><br><small>${x.desc}</small></td><td>${x.qty}</td><td>${x.neto.toFixed(2)} €</td><td>${x.total.toFixed(2)} €</td><td onclick="cart.splice(${i},1);renderCart()" style="color:red;cursor:pointer;">✕</td></tr>`).join('');
         document.getElementById('grand').innerText = cart.reduce((a,b) => a + b.total, 0).toFixed(2);
     }
 
     function exportPDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const dateStr = new Date().toLocaleDateString('hr-HR');
-        const napomenaTxt = document.getElementById('napomena').value;
+        const { jsPDF } = window.jspdf; const doc = new jsPDF();
+        const t = translations[curLang]; const dateStr = new Date().toLocaleDateString();
         
-        // 1. Logo u PDF-u
-        const img = new Image();
-        img.src = 'CISA logo.JPG';
-        try { doc.addImage(img, 'JPG', 14, 10, 40, 15); } catch(e) {}
+        doc.setFontSize(20); doc.setTextColor(26, 58, 95); doc.text(t.pdfTitle, 14, 20);
+        doc.setFontSize(10); doc.setTextColor(50);
+        doc.text(`${t.pdfDate}: ${dateStr}`, 14, 30);
+        doc.text(`${t.pdfClient}: ${curU.CLIENT_NAME}`, 14, 35);
+        doc.text(`${t.pdfCode}: ${curU.CLIENT_CODE}`, 14, 40);
 
-        doc.setFontSize(20);
-        doc.setTextColor(26, 58, 95);
-        doc.text("PONUDA BR: " + Math.floor(Date.now()/100000), 100, 20);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(50);
-        doc.text(`Datum: ${dateStr}`, 14, 35);
-        doc.text(`Klijent: ${curU.CLIENT_NAME}`, 14, 40);
-        doc.text(`Kod klijenta: ${curU.CLIENT_CODE}`, 14, 45);
-
-        const body = cart.map(x => [x.code, x.qty, x.neto.toFixed(2) + " €", x.total.toFixed(2) + " €"]);
         doc.autoTable({
-            startY: 52,
-            head: [['Šifra artikla', 'Količina', 'Neto/kom', 'Ukupno']],
-            body: body,
-            foot: [['', '', 'UKUPNO:', document.getElementById('grand').innerText + " €"]],
-            headStyles: { fillColor: [26, 58, 95] },
-            footStyles: { fillColor: [240, 240, 240], textColor: [26, 58, 95], fontStyle: 'bold' }
+            startY: 45,
+            head: [[t.thCode, t.thQty, t.thNeto, t.thTotal]],
+            body: cart.map(x => [x.code, x.qty, x.neto.toFixed(2) + " €", x.total.toFixed(2) + " €"]),
+            foot: [['', '', t.grandTotal + ":", document.getElementById('grand').innerText + " €"]],
+            headStyles: { fillColor: [26, 58, 95] }
         });
 
-        let finalY = doc.lastAutoTable.finalY + 15;
-        if(napomenaTxt) {
-            doc.setFont("helvetica", "bold");
-            doc.text("NAPOMENA:", 14, finalY);
+        const nTxt = document.getElementById('napomena').value;
+        if(nTxt) {
+            doc.text(t.noteLabel, 14, doc.lastAutoTable.finalY + 10);
             doc.setFont("helvetica", "normal");
-            const splitNote = doc.splitTextToSize(napomenaTxt, 180);
-            doc.text(splitNote, 14, finalY + 7);
+            doc.text(doc.splitTextToSize(nTxt, 180), 14, doc.lastAutoTable.finalY + 17);
         }
-
-        doc.setFontSize(9);
-        doc.setTextColor(150);
-        doc.text(`${MOJI_KONTAKTI.tel} | ${MOJI_KONTAKTI.email} | ${MOJI_KONTAKTI.web}`, 14, 285);
-
         doc.save(`Ponuda_${curU.CLIENT_CODE}.pdf`);
     }
 
     function exportCSV() {
-        const dateStr = new Date().toLocaleDateString('hr-HR');
-        let csv = `Ponuda za: ${curU.CLIENT_NAME}\nDatum: ${dateStr}\nNapomena: ${document.getElementById('napomena').value}\n\nSifra,Opis,Kolicina,Neto,Ukupno\n`;
-        cart.forEach(x => { csv += `"${x.code}","${x.desc}",${x.qty},${x.neto.toFixed(2)},${x.total.toFixed(2)}\n`; });
-        csv += `\n,,,UKUPNO:,${document.getElementById('grand').innerText}`;
-        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `Ponuda_${curU.CLIENT_CODE}.csv`;
-        link.click();
+        let csv = "\ufeff" + `Client: ${curU.CLIENT_NAME}\nDate: ${new Date().toLocaleDateString()}\n\nCode,Qty,Price,Total\n`;
+        cart.forEach(x => { csv += `${x.code},${x.qty},${x.neto.toFixed(2)},${x.total.toFixed(2)}\n`; });
+        const b = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+        const l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = "Offer.csv"; l.click();
     }
 
     window.onload = init;
