@@ -25,8 +25,10 @@
             width: 24px; height: 24px; cursor: pointer; font-weight: bold;
             display: none; align-items: center; justify-content: center; font-size: 12px;
         }
-        .clear-btn:hover { background: #ddd; color: #333; }
 
+        .qty-btn { background: #eee; border: none; width: 25px; height: 25px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .qty-btn:hover { background: #ddd; }
+        
         input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px; box-sizing: border-box; font-size: 16px; font-family: inherit; }
         .btn { border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 15px; font-size: 16px; transition: 0.3s; color: white; }
         .btn-p { background: var(--p); }
@@ -44,7 +46,6 @@
         td { padding: 12px; border-bottom: 1px solid #eee; }
         .total-area { text-align: right; font-size: 28px; font-weight: bold; color: var(--p); padding: 25px 0; }
         .logo-img { width: 160px; margin-bottom: 20px; }
-        .loader { color: #888; font-size: 14px; margin-top: 15px; }
         @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -52,14 +53,14 @@
 
     <div id="login-page" class="login-page">
         <div class="box">
-            <img src="CISA logo.JPG" class="logo-img" alt="CISA Logo">
+            <img src="CISA logo.JPG" id="pdfLogoSource" class="logo-img" alt="CISA Logo">
             <div class="lang-switch">
-                <div class="lang-btn active" id="btn-sr" onclick="setLang('sr')">SRB</div>
+                <div class="lang-btn active" id="btn-sr" onclick="setLang('sr')">EX_YU</div>
                 <div class="lang-btn" id="btn-en" onclick="setLang('en')">ENG</div>
                 <div class="lang-btn" id="btn-it" onclick="setLang('it')">ITA</div>
             </div>
             <h3 id="t-welcome" style="color:var(--p); margin-top:0;">B2B Klijentski Portal</h3>
-            <div id="status" class="loader">Učitavanje...</div>
+            <div id="status">Učitavanje...</div>
             <div id="login-form" style="display:none;">
                 <input type="text" id="uCode">
                 <input type="password" id="uPass">
@@ -105,29 +106,23 @@
                 <h3 id="t-offerTitle"></h3>
                 <div style="display:flex; gap:10px;">
                     <button class="btn btn-a" style="margin:0; width:auto; padding: 10px 20px;" onclick="exportPDF()">EXPORT PDF</button>
-                    <button class="btn btn-p" style="margin:0; width:auto; padding: 10px 20px; background:#34495e;" onclick="exportCSV()">EXPORT EXCEL</button>
+                    <button class="btn btn-p" style="margin:0; width:auto; padding: 10px 20px; background:#34495e;" onclick="exportCSV()">EXCEL</button>
+                    <button class="btn" style="margin:0; width:auto; padding: 10px 20px; background:#c0392b;" onclick="clearCart()" id="t-clearAll">ISPRAZNI SVE</button>
                 </div>
             </div>
             <div style="overflow-x:auto;">
                 <table>
                     <thead>
                         <tr>
-                            <th id="th-code"></th>
-                            <th id="th-desc"></th>
-                            <th id="th-fam"></th>
-                            <th id="th-bruto"></th>
-                            <th id="th-r1"></th>
-                            <th id="th-r2"></th>
-                            <th id="th-qty"></th>
-                            <th id="th-total"></th>
-                            <th></th>
+                            <th id="th-code"></th><th id="th-desc"></th><th id="th-fam"></th>
+                            <th id="th-bruto"></th><th id="th-r1"></th><th id="th-r2"></th>
+                            <th id="th-qty"></th><th id="th-total"></th><th></th>
                         </tr>
                     </thead>
                     <tbody id="cart"></tbody>
                 </table>
             </div>
             <div class="total-area"><span id="t-grandTotal"></span>: <span id="grand">0.00</span> €</div>
-            
             <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
                 <label id="t-noteLabel" style="font-size: 13px; font-weight: bold; color: var(--p); display: block;"></label>
                 <textarea id="napomena" rows="2"></textarea>
@@ -144,31 +139,31 @@
             welcome: "B2B Klijentski Portal", loginBtn: "PRIJAVI SE", loggedAs: "Prijavljeni ste kao:", logout: "ODJAVA ✕",
             searchTitle: "Pretraga artikala", searchPh: "Unesite šifru ili opis...", calcTitle: "Obračun cene",
             gross: "Bruto cena", disc: "Vaši rabati", qtyLabel: "Količina za ponudu:", addBtn: "DODAJ NA PONUDU",
-            offerTitle: "Vaša Ponuda / Specifikacija", 
+            offerTitle: "Vaša Ponuda / Specifikacija", clearAll: "ISPRAZNI SVE",
             thCode: "Šifra", thDesc: "Opis", thFam: "Fam.", thBruto: "Bruto", thR1: "R1%", thR2: "R2%", thQty: "Kol.", thTotal: "Ukupno",
-            grandTotal: "UKUPNO", noteLabel: "NAPOMENA:", selPh: "Odaberite artikal iz liste...",
+            grandTotal: "UKUPNO", noteLabel: "NAPOMENA:", selPh: "Odaberite artikal...",
             pdfTitle: "CISA B2B PONUDA", pdfClient: "Klijent", pdfCode: "Kod klijenta", pdfDate: "Datum",
-            uCodePh: "Kod klijenta", uPassPh: "Lozinka", loginErr: "Pogrešni podaci za prijavu."
+            uCodePh: "Kod klijenta", uPassPh: "Lozinka", loginErr: "Pogrešni podaci."
         },
         en: {
             welcome: "B2B Client Portal", loginBtn: "LOGIN", loggedAs: "Logged in as:", logout: "LOGOUT ✕",
             searchTitle: "Product Search", searchPh: "Enter code or description...", calcTitle: "Price Calculation",
             gross: "Gross Price", disc: "Your Discounts", qtyLabel: "Quantity for offer:", addBtn: "ADD TO OFFER",
-            offerTitle: "Your Offer / Specification", 
+            offerTitle: "Your Offer / Specification", clearAll: "CLEAR ALL",
             thCode: "Code", thDesc: "Description", thFam: "Fam.", thBruto: "Gross", thR1: "D1%", thR2: "D2%", thQty: "Qty", thTotal: "Total",
-            grandTotal: "GRAND TOTAL", noteLabel: "NOTES:", selPh: "Select item from list...",
+            grandTotal: "GRAND TOTAL", noteLabel: "NOTES:", selPh: "Select item...",
             pdfTitle: "CISA B2B QUOTATION", pdfClient: "Client", pdfCode: "Client Code", pdfDate: "Date",
-            uCodePh: "Client Code", uPassPh: "Password", loginErr: "Invalid login credentials."
+            uCodePh: "Client Code", uPassPh: "Password", loginErr: "Invalid login."
         },
         it: {
             welcome: "Portale Clienti B2B", loginBtn: "ACCEDI", loggedAs: "Accesso effettuato come:", logout: "LOGOUT ✕",
-            searchTitle: "Ricerca Prodotti", searchPh: "Inserisci codice o descrizione...", calcTitle: "Calcolo Prezzo",
+            searchTitle: "Ricerca Prodotti", searchPh: "Inserisci codice ili opis...", calcTitle: "Calcolo Prezzo",
             gross: "Prezzo Lordo", disc: "I Tuoi Sconti", qtyLabel: "Quantità per offerta:", addBtn: "AGGIUNGI ALL'OFFERTA",
-            offerTitle: "Tua Offerta / Specifica", 
+            offerTitle: "Tua Offerta / Specifica", clearAll: "PULISCI TUTTO",
             thCode: "Codice", thDesc: "Descrizione", thFam: "Fam.", thBruto: "Lordo", thR1: "S1%", thR2: "S2%", thQty: "Qtà", thTotal: "Totale",
-            grandTotal: "TOTALE GENERALE", noteLabel: "NOTE:", selPh: "Seleziona un articolo...",
+            grandTotal: "TOTALE GENERALE", noteLabel: "NOTE:", selPh: "Seleziona articolo...",
             pdfTitle: "CISA B2B PREVENTIVO", pdfClient: "Cliente", pdfCode: "Codice Cliente", pdfDate: "Data",
-            uCodePh: "Codice Cliente", uPassPh: "Password", loginErr: "Credenziali non valide."
+            uCodePh: "Codice Cliente", uPassPh: "Password", loginErr: "Errore login."
         }
     };
 
@@ -194,6 +189,7 @@
         document.getElementById('t-qtyLabel').innerText = t.qtyLabel;
         document.getElementById('t-addBtn').innerText = t.addBtn;
         document.getElementById('t-offerTitle').innerText = t.offerTitle;
+        document.getElementById('t-clearAll').innerText = t.clearAll;
         document.getElementById('th-code').innerText = t.thCode;
         document.getElementById('th-desc').innerText = t.thDesc;
         document.getElementById('th-fam').innerText = t.thFam;
@@ -215,9 +211,11 @@
         document.getElementById('clearSearch').style.display = 'none';
         document.getElementById('calcArea').style.display = 'none';
         document.getElementById('selName').innerText = translations[curLang].selPh;
-        document.getElementById('qty').value = 1; // RESET KOLIČINE NA 1
+        document.getElementById('qty').value = 1;
         selI = null;
     }
+
+    function clearCart() { if(confirm("Isprazniti cijelu ponudu?")) { cart = []; renderCart(); } }
 
     async function init() {
         try {
@@ -234,7 +232,7 @@
             document.getElementById('status').style.display = 'none';
             document.getElementById('login-form').style.display = 'block';
             updateUI();
-        } catch (e) { document.getElementById('status').innerText = "Greška / Error!"; }
+        } catch (e) { document.getElementById('status').innerText = "Greška u učitavanju!"; }
     }
 
     function login() {
@@ -251,16 +249,12 @@
         curU = null; cart = []; renderCart(); selI = null;
         clearInput();
         document.getElementById('uCode').value = ''; document.getElementById('uPass').value = '';
-        document.getElementById('napomena').value = '';
         document.getElementById('app').style.display = 'none'; document.getElementById('login-page').style.display = 'flex';
-        updateUI();
     }
 
     function srch() {
         const t = document.getElementById('search').value.toLowerCase();
-        const btn = document.getElementById('clearSearch');
-        btn.style.display = t.length > 0 ? 'flex' : 'none';
-
+        document.getElementById('clearSearch').style.display = t.length > 0 ? 'flex' : 'none';
         if(t.length < 2) { document.getElementById('list').innerHTML = ''; return; }
         const f = db.items.filter(x => (x.CODE && x.CODE.toString().toLowerCase().includes(t)) || (x.DESCRIPTION && x.DESCRIPTION.toLowerCase().includes(t))).slice(0, 30);
         document.getElementById('list').innerHTML = f.map(x => `<div class="row" onclick="pick('${x.CODE}')"><strong>${x.CODE}</strong><br><small>${x.DESCRIPTION}</small></div>`).join('');
@@ -286,13 +280,20 @@
 
     function add() {
         const res = calc(), q = parseInt(document.getElementById('qty').value) || 1;
+        const netTotal = res.neto * q;
         cart.push({ 
             code: selI.CODE, desc: selI.DESCRIPTION, family: selI.FAMILY,
-            gross: res.bruto, r1: res.r1, r2: res.r2,
-            qty: q, total: res.neto * q 
+            gross: res.bruto, r1: res.r1, r2: res.r2, neto: res.neto,
+            qty: q, total: netTotal 
         });
+        renderCart(); clearInput();
+    }
+
+    function updateQty(idx, delta) {
+        cart[idx].qty += delta;
+        if(cart[idx].qty < 1) cart[idx].qty = 1;
+        cart[idx].total = cart[idx].neto * cart[idx].qty;
         renderCart();
-        clearInput(); // Ovo sada resetuje i pretragu i količinu na 1
     }
 
     function renderCart() {
@@ -304,7 +305,11 @@
                 <td>${x.gross.toFixed(2)} €</td>
                 <td>${x.r1}%</td>
                 <td>${x.r2}%</td>
-                <td>${x.qty}</td>
+                <td>
+                    <button class="qty-btn" onclick="updateQty(${i},-1)">-</button>
+                    <span style="margin:0 10px; font-weight:bold;">${x.qty}</span>
+                    <button class="qty-btn" onclick="updateQty(${i},1)">+</button>
+                </td>
                 <td><strong>${x.total.toFixed(2)} €</strong></td>
                 <td onclick="cart.splice(${i},1);renderCart()" style="color:red;cursor:pointer;">✕</td>
             </tr>`).join('');
@@ -316,23 +321,43 @@
         const doc = new jsPDF('landscape');
         const t = translations[curLang];
         const dateStr = new Date().toLocaleDateString();
-        doc.setFontSize(20); doc.setTextColor(26, 58, 95); doc.text(t.pdfTitle, 14, 20);
+        
+        // Logo na vrhu
+        const img = document.getElementById('pdfLogoSource');
+        doc.addImage(img, 'JPEG', 14, 10, 40, 15);
+
+        doc.setFontSize(20); doc.setTextColor(26, 58, 95); doc.text(t.pdfTitle, 14, 35);
         doc.setFontSize(10); doc.setTextColor(50);
-        doc.text(`${t.pdfDate}: ${dateStr}`, 14, 30);
-        doc.text(`${t.pdfClient}: ${curU.CLIENT_NAME} (${curU.CLIENT_CODE})`, 14, 35);
+        doc.text(`${t.pdfDate}: ${dateStr}`, 14, 45);
+        doc.text(`${t.pdfClient}: ${curU.CLIENT_NAME} (${curU.CLIENT_CODE})`, 14, 50);
+
         doc.autoTable({
-            startY: 45,
+            startY: 55,
             head: [[t.thCode, t.thDesc, t.thFam, t.thBruto, t.thR1, t.thR2, t.thQty, t.thTotal]],
             body: cart.map(x => [x.code, x.desc, x.family, x.gross.toFixed(2) + " €", x.r1 + "%", x.r2 + "%", x.qty, x.total.toFixed(2) + " €"]),
             foot: [['', '', '', '', '', '', t.grandTotal + ":", document.getElementById('grand').innerText + " €"]],
             headStyles: { fillColor: [26, 58, 95], fontSize: 9 },
-            columnStyles: { 1: { cellWidth: 80 }, 0: { cellWidth: 25 }, 2: { cellWidth: 15 } }
+            columnStyles: { 1: { cellWidth: 80 } }
         });
+
+        // Napomena
         const nTxt = document.getElementById('napomena').value;
         if(nTxt) {
             doc.text(t.noteLabel, 14, doc.lastAutoTable.finalY + 10);
             doc.text(doc.splitTextToSize(nTxt, 260), 14, doc.lastAutoTable.finalY + 17);
         }
+
+        // Footer sa tvojim kontaktom
+        const pageCount = doc.internal.getNumberOfPages();
+        for(let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            const footerTxt = "Kontakt osoba: Zoran Dragojević ; cisa.zoran.d@gmail.com ; +387 65 363 063";
+            const xOffset = (doc.internal.pageSize.width / 2) - (doc.getStringUnitWidth(footerTxt) * doc.internal.getFontSize() / doc.internal.scaleFactor / 2);
+            doc.text(footerTxt, xOffset, doc.internal.pageSize.height - 10);
+        }
+        
         doc.save(`Ponuda_${curU.CLIENT_CODE}.pdf`);
     }
 
