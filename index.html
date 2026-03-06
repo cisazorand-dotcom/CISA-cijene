@@ -30,10 +30,10 @@
     <div id="login-page" class="login-page">
         <div class="box">
             <h3 style="color:var(--p);">CISA B2B Login</h3>
-            <div id="loading-db" class="loader">Učitavanje podataka...</div>
+            <div id="status" class="loader">Učitavanje podataka...</div>
             <div id="login-form" style="display:none;">
-                <input type="text" id="uCode" placeholder="Klijentski kod">
-                <input type="password" id="uPass" placeholder="Lozinka">
+                <input type="text" id="uCode" placeholder="Klijentski kod (npr. 18326)">
+                <input type="password" id="uPass" placeholder="Lozinka (test)">
                 <button class="btn" onclick="login()">PRIJAVI SE</button>
                 <p id="err" style="color:red; display:none; margin-top:10px;">Pogrešan kod ili lozinka.</p>
             </div>
@@ -49,7 +49,7 @@
         <div class="grid">
             <div class="card">
                 <h3>Pretraga artikala</h3>
-                <input type="text" id="search" placeholder="Unesite šifru..." oninput="srch()">
+                <input type="text" id="search" placeholder="Unesite šifru ili opis..." oninput="srch()">
                 <div id="list" class="item-list"></div>
             </div>
 
@@ -58,7 +58,7 @@
                 <div id="selName" style="font-weight:bold; min-height:40px;">Odaberite artikal iz liste...</div>
                 <div id="calcArea" style="display:none; margin-top:15px;">
                     <p>Bruto cijena: <span id="resGross">0.00</span> €</p>
-                    <p>Vaši rabati: <span id="resDisc" style="color:var(--s); font-weight:bold;">0% + 0%</span></p>
+                    <p>Vaši popusti: <span id="resDisc" style="color:var(--s); font-weight:bold;">0% + 0%</span></p>
                     <hr>
                     <div style="font-size:32px; color:var(--s); font-weight:bold; margin:15px 0;" id="selPrice">0.00 €</div>
                     <label>Količina:</label>
@@ -69,7 +69,7 @@
         </div>
 
         <div class="card">
-            <h3>Vaša Ponuda / Kalkulacija</h3>
+            <h3>Vaša Ponuda</h3>
             <div style="overflow-x:auto;">
                 <table>
                     <thead><tr><th>Šifra</th><th>Količina</th><th>Neto kom</th><th>Ukupno</th><th></th></tr></thead>
@@ -81,78 +81,94 @@
     </div>
 
 <script>
-    const SHEETS_URL = "https://script.google.com/macros/s/AKfycbxpYZHBUVGtUPvfJg9pHO14TCXt5da5htFVvQWAm3kYUX6_tbJuAP5kCbV8yfsK6c_f/exec";
-    const BRUTO_URL = "CISA_BRUTO_CIJENE.csv";
-    
+    // Konfiguracija fajlova - moraju biti na GitHub-u u istom folderu
+    const FILES = {
+        clients: 'baza_Clients.csv',
+        discounts: 'baza_Discounts.csv',
+        prices: 'baza_PriceListEUR39.csv'
+    };
+
     let db = { clients: [], items: [], discounts: {} }, curU = null, selI = null, cart = [];
 
     async function init() {
         try {
-            const [resC, resD] = await Promise.all([
-                fetch(`${SHEETS_URL}?sheet=Klijenti`).then(r => r.json()),
-                fetch(`${SHEETS_URL}?sheet=Rabati`).then(r => r.json())
-            ]);
+            // 1. Učitaj klijente
+            const clientsRes = await fetch(FILES.clients);
+            const clientsCsv = await clientsRes.text();
+            db.clients = Papa.parse(clientsCsv, { header: true, skipEmptyLines: true }).data;
 
-            db.clients = formatData(resC);
-            formatData(resD).forEach(x => {
-                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { r1: x.DISCOUNT1 || 0, r2: x.DISCOUNT2 || 0 };
+            // 2. Učitaj popuste
+            const discRes = await fetch(FILES.discounts);
+            const discCsv = await discRes.text();
+            const discData = Papa.parse(discCsv, { header: true, skipEmptyLines: true }).data;
+            discData.forEach(x => {
+                let key = x.CLIENT_CODE + "-" + x.FAMILY;
+                db.discounts[key] = { 
+                    r1: parseFloat(x.BASIC_DISCOUNT) || 0, 
+                    r2: parseFloat(x.DISCOUNT_2) || 0 
+                };
             });
 
-            Papa.parse(BRUTO_URL, {
-                download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
-                complete: function(results) {
-                    db.items = results.data;
-                    document.getElementById('loading-db').style.display = 'none';
-                    document.getElementById('login-form').style.display = 'block';
-                }
-            });
+            // 3. Učitaj cjenovnik
+            const priceRes = await fetch(FILES.prices);
+            const priceCsv = await priceRes.text();
+            db.items = Papa.parse(priceCsv, { header: true, skipEmptyLines: true }).data;
+
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
         } catch (e) {
             console.error(e);
-            document.getElementById('loading-db').innerText = "Greška pri učitavanju baze!";
+            document.getElementById('status').innerText = "Greška u učitavanju fajlova sa GitHuba!";
         }
-    }
-
-    function formatData(arr) {
-        const h = arr[0];
-        return arr.slice(1).map(row => {
-            let o = {}; h.forEach((key, i) => o[key] = row[i]); return o;
-        });
     }
 
     function login() {
         const c = document.getElementById('uCode').value.trim();
         const p = document.getElementById('uPass').value.trim();
-        const u = db.clients.find(x => x.CLIENT_CODE.toString() == c && x.PASSWORD.toString() == p);
+        const u = db.clients.find(x => x.CLIENT_CODE == c && x.PASSWORD == p);
         if(u) {
             curU = u;
             document.getElementById('login-page').style.display = 'none';
             document.getElementById('app').style.display = 'block';
-            document.getElementById('userDisplay').innerText = u.NAME;
-        } else { document.getElementById('err').style.display = 'block'; }
+            document.getElementById('userDisplay').innerText = u.CLIENT_NAME;
+        } else { 
+            document.getElementById('err').style.display = 'block'; 
+        }
     }
 
     function srch() {
         const t = document.getElementById('search').value.toLowerCase();
         if(t.length < 2) return;
-        const f = db.items.filter(x => x.CODE && x.CODE.toString().toLowerCase().includes(t)).slice(0, 20);
+        const f = db.items.filter(x => 
+            (x.CODE && x.CODE.toString().toLowerCase().includes(t)) || 
+            (x.DESCRIPTION && x.DESCRIPTION.toLowerCase().includes(t))
+        ).slice(0, 20);
+        
         document.getElementById('list').innerHTML = f.map(x => `
             <div class="row" onclick="pick('${x.CODE}')">
-                <strong>${x.CODE}</strong><br><small>${x.DESCRIPTION || ''}</small>
+                <strong>${x.CODE}</strong><br><small>${x.DESCRIPTION}</small>
             </div>
         `).join('');
     }
 
     function pick(code) {
         selI = db.items.find(x => x.CODE == code);
-        document.getElementById('selName').innerText = selI.CODE + " - " + (selI.DESCRIPTION || "");
+        document.getElementById('selName').innerText = selI.CODE + " - " + selI.DESCRIPTION;
         document.getElementById('calcArea').style.display = 'block';
         calc();
     }
 
     function calc() {
-        const g = parseFloat(selI['GROSS PRICE']) || 0;
-        const d = db.discounts[`${curU.CLIENT_CODE}-${selI.FAMILY}`] || {r1:0, r2:0};
+        // Čišćenje cijene od "EUR" i pretvaranje zareza u točku
+        let rawPrice = selI['GROSS PRICE'] ? selI['GROSS PRICE'].toString().replace(/[^\d,.]/g, '').replace(',', '.') : "0";
+        const g = parseFloat(rawPrice) || 0;
+        
+        // Traženje popusta za ovog klijenta i ovu grupu artikla
+        const d = db.discounts[curU.CLIENT_CODE + "-" + selI.FAMILY] || {r1:0, r2:0};
+        
+        // Formula: Bruto * (1 - r1%) * (1 - r2%)
         const n = g * (1 - d.r1/100) * (1 - d.r2/100);
+        
         document.getElementById('resGross').innerText = g.toFixed(2);
         document.getElementById('resDisc').innerText = d.r1 + "% + " + d.r2 + "%";
         document.getElementById('selPrice').innerText = n.toFixed(2) + " €";
@@ -160,14 +176,21 @@
     }
 
     function add() {
-        const n = calc(); const q = parseInt(document.getElementById('qty').value) || 1;
+        const n = calc();
+        const q = parseInt(document.getElementById('qty').value) || 1;
         cart.push({ c: selI.CODE, q, n, t: n*q });
         renderCart();
     }
 
     function renderCart() {
         document.getElementById('cart').innerHTML = cart.map((x,i) => `
-            <tr><td>${x.c}</td><td>${x.q}</td><td>${x.n.toFixed(2)}</td><td>${x.t.toFixed(2)} €</td><td onclick="cart.splice(${i},1);renderCart()" style="color:red;cursor:pointer">✕</td></tr>
+            <tr>
+                <td>${x.c}</td>
+                <td>${x.q}</td>
+                <td>${x.n.toFixed(2)} €</td>
+                <td>${x.t.toFixed(2)} €</td>
+                <td onclick="cart.splice(${i},1);renderCart()" style="color:red;cursor:pointer">✕</td>
+            </tr>
         `).join('');
         document.getElementById('grand').innerText = cart.reduce((a,b) => a + b.t, 0).toFixed(2);
     }
