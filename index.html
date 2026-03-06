@@ -334,39 +334,99 @@
 
     function exportPDF() {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('landscape');
+        // Koristimo landscape za širinu, jedinica je milimetar (mm)
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }); 
+        
         const t = translations[curLang];
-        const dateStr = new Date().toLocaleDateString();
+        const dateStr = new Date().toLocaleDateString('sr-RS'); // Format datuma za našu regiju
+        
+        // --- POPRAVKA LOGO-A ---
         const img = document.getElementById('pdfLogoSource');
-        if(img) doc.addImage(img, 'JPEG', 14, 10, 40, 15);
-        doc.setFontSize(20); doc.setTextColor(26, 58, 95); doc.text(t.pdfTitle, 14, 35);
-        doc.setFontSize(10); doc.setTextColor(50);
-        doc.text(`${t.pdfDate}: ${dateStr}`, 14, 45);
-        doc.text(`${t.pdfClient}: ${curU.CLIENT_NAME} (${curU.CLIENT_CODE})`, 14, 50);
+        if (img && img.complete && img.naturalWidth > 0) {
+            // Izračunavamo proporcije originalne slike
+            const originalWidth = img.naturalWidth;
+            const originalHeight = img.naturalHeight;
+            const aspectRatio = originalWidth / originalHeight;
+
+            // Zidamo fiksnu ŠIRINU logotipa u PDF-u (npr. 45mm je dobra mjera)
+            const pdfImgWidth = 45; 
+            // VISINU računamo automatski da sačuvamo proporcije (neće biti uzak)
+            const pdfImgHeight = pdfImgWidth / aspectRatio; 
+            
+            // Postavljamo logo na poziciju X=14, Y=10
+            doc.addImage(img, 'JPEG', 14, 10, pdfImgWidth, pdfImgHeight);
+            
+            // Pomjeramo početak teksta ispod logotipa, zavisno od njegove visine
+            var textStartY = 10 + pdfImgHeight + 10; 
+        } else {
+            // Ako nema logotipa, tekst kreće standardno
+            var textStartY = 20;
+        }
+
+        // --- NASLOV I PODACI ---
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.setTextColor(26, 58, 95); // CISA plava
+        doc.text(t.pdfTitle, 14, textStartY);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(50);
+        doc.text(`${t.pdfDate}: ${dateStr}`, 14, textStartY + 8);
+        doc.text(`${t.pdfClient}: ${curU.CLIENT_NAME} (${curU.CLIENT_CODE})`, 14, textStartY + 13);
+
+        // --- TABELA ---
+        // Ključni dio za slova č,ć,š... u tabeli:
         doc.autoTable({
-            startY: 55,
+            startY: textStartY + 18, // Početak tabele zavisi od visine logotipa
             head: [[t.thCode, t.thDesc, t.thFam, t.thBruto, t.thR1, t.thR2, t.thQty, t.thTotal]],
-            body: cart.map(x => [x.code, x.desc, x.family, x.gross.toFixed(2) + " €", x.r1 + "%", x.r2 + "%", x.qty, x.total.toFixed(2) + " €"]),
+            body: cart.map(x => [
+                x.code, 
+                x.desc, 
+                x.family, 
+                x.gross.toFixed(2) + " €", 
+                x.r1 + "%", 
+                x.r2 + "%", 
+                x.qty, 
+                x.total.toFixed(2) + " €"
+            ]),
             foot: [['', '', '', '', '', '', t.grandTotal + ":", document.getElementById('grand').innerText + " €"]],
-            headStyles: { fillColor: [26, 58, 95], fontSize: 9 },
-            columnStyles: { 1: { cellWidth: 80 } }
+            styles: { font: "helvetica", fontStyle: "normal" }, // Osigurava font u ćelijama
+            headStyles: { fillColor: [26, 58, 95], fontSize: 9, halign: 'center' }, // Centrirano zaglavlje
+            columnStyles: { 
+                1: { cellWidth: 80 }, // Opis najširi
+                3: { halign: 'right' }, // Cijene desno poravnate
+                4: { halign: 'center' }, // Rabati centrirani
+                5: { halign: 'center' },
+                6: { halign: 'center' }, // Količina centrirana
+                7: { halign: 'right', fontStyle: 'bold' } // Ukupno desno i bold
+            },
+            // Footer na svakoj stranici
+            didDrawPage: function (data) {
+                doc.setFontSize(9);
+                doc.setTextColor(100);
+                const footerTxt = "Kontakt osoba: Zoran Dragojević ; cisa.zoran.d@gmail.com ; +387 65 363 063";
+                const pageSize = doc.internal.pageSize;
+                const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth();
+                const textWidth = doc.getTextWidth(footerTxt);
+                const xOffset = (pageWidth - textWidth) / 2;
+                doc.text(footerTxt, xOffset, pageSize.height - 10);
+            }
         });
+
+        // --- NAPOMENA ISPOD TABELE ---
         const nTxt = document.getElementById('napomena').value;
         if(nTxt) {
+            doc.setFontSize(10);
+            doc.setTextColor(50);
             doc.text(t.noteLabel, 14, doc.lastAutoTable.finalY + 10);
-            doc.text(doc.splitTextToSize(nTxt, 260), 14, doc.lastAutoTable.finalY + 17);
+            const splitNote = doc.splitTextToSize(nTxt, 260); // Prilagođeno landscape širini
+            doc.text(splitNote, 14, doc.lastAutoTable.finalY + 17);
         }
-        const pageCount = doc.internal.getNumberOfPages();
-        for(let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(9); doc.setTextColor(100);
-            const footerTxt = "Kontakt osoba: Zoran Dragojevic, Agent & Consultant for Balkans ; cisa.zoran.d@gmail.com ; +387 65 363 063";
-            const pageWidth = doc.internal.pageSize.width;
-            doc.text(footerTxt, (pageWidth/2), doc.internal.pageSize.height - 10, {align: 'center'});
-        }
+        
+        // Snimanje fajla
         doc.save(`Ponuda_${curU.CLIENT_CODE}.pdf`);
     }
-
     function exportCSV() {
         let csv = "\ufeff" + `Client: ${curU.CLIENT_NAME}\nDate: ${new Date().toLocaleDateString()}\n\nCode,Description,Family,Gross,R1,R2,Qty,Total\n`;
         cart.forEach(x => { csv += `"${x.code}","${x.desc}","${x.family}",${x.gross.toFixed(2)},${x.r1},${x.r2},${x.qty},${x.total.toFixed(2)}\n`; });
