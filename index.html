@@ -270,7 +270,7 @@
         const body = cart.map(x => [x.code, x.qty, x.neto.toFixed(2) + " €", x.total.toFixed(2) + " €"]);
         doc.autoTable({
             startY: 52,
-            head: [['Sifra artikla', 'Kolicina', 'Neto kom', 'Ukupno']],
+            head: [['Šifra artikla', 'Količina', 'Neto/kom', 'Ukupno']],
             body: body,
             foot: [['', '', 'UKUPNO:', document.getElementById('grand').innerText + " €"]],
             headStyles: { fillColor: [26, 58, 95] },
