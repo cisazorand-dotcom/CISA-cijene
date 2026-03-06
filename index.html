@@ -175,7 +175,17 @@
     }
 
     function logout() {
-        curU = null; cart = []; renderCart();
+        curU = null; 
+        cart = []; 
+        renderCart();
+        
+        // Brišemo tekst iz polja za pretragu
+        document.getElementById('search').value = '';
+        // Praznimo listu rezultata pretrage
+        document.getElementById('list').innerHTML = '';
+        // Sakrivamo kalkulator ako je bio otvoren
+        document.getElementById('calcArea').style.display = 'none';
+        
         document.getElementById('uCode').value = '';
         document.getElementById('uPass').value = '';
         document.getElementById('napomena').value = '';
