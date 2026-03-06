@@ -53,7 +53,7 @@
     <div id="app">
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; border-left: 5px solid var(--p);">
             <div>Prijavljeni ste kao: <strong id="userDisplay" style="color:var(--p);"></strong></div>
-            <button onclick="location.reload()" style="background:none; border:none; color:#c0392b; cursor:pointer; font-weight:bold; font-size:14px;">ODJAVA ✕</button>
+            <button onclick="logout()" style="background:none; border:none; color:#c0392b; cursor:pointer; font-weight:bold; font-size:14px;">ODJAVA ✕</button>
         </div>
 
         <div class="grid">
@@ -103,9 +103,9 @@
             
             <div class="total-area">UKUPNO: <span id="grand">0.00</span> €</div>
             
-            <div style="margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 15px;">
-                <label style="font-size: 13px; font-weight: bold; color: var(--p);">NAPOMENA:</label>
-                <textarea id="napomena" rows="2" placeholder="Unesite dodatne informacije (npr. rok isporuke, način plaćanja...)"></textarea>
+            <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                <label style="font-size: 14px; font-weight: bold; color: var(--p); display: block;">DODATNA NAPOMENA:</label>
+                <textarea id="napomena" rows="3" placeholder="Unesite dodatne informacije..."></textarea>
             </div>
         </div>
     </div>
@@ -119,13 +119,6 @@
 
     let db = { clients: [], items: [], discounts: {} }, curU = null, selI = null, cart = [];
 
-    // Tvoji kontakt podaci za PDF
-    const MOJI_KONTAKTI = {
-        tel: "+387 XX XXX XXX",
-        email: "tvoj-email@cisa.com",
-        web: "www.cisa.com"
-    };
-
     async function init() {
         try {
             const [cRes, dRes, pRes] = await Promise.all([
@@ -135,92 +128,5 @@
             ]);
 
             db.clients = Papa.parse(cRes, { header: true, skipEmptyLines: true }).data;
-            
             Papa.parse(dRes, { header: true, skipEmptyLines: true }).data.forEach(x => {
-                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { 
-                    r1: parseFloat(x.BASIC_DISCOUNT) || 0, 
-                    r2: parseFloat(x.DISCOUNT_2) || 0 
-                };
-            });
-
-            db.items = Papa.parse(pRes, { header: true, skipEmptyLines: true }).data;
-
-            document.getElementById('status').style.display = 'none';
-            document.getElementById('login-form').style.display = 'block';
-        } catch (e) {
-            document.getElementById('status').innerText = "Greška: Provjerite fajlove na GitHubu!";
-        }
-    }
-
-    function login() {
-        const c = document.getElementById('uCode').value.trim();
-        const p = document.getElementById('uPass').value.trim();
-        const u = db.clients.find(x => x.CLIENT_CODE == c && x.PASSWORD == p);
-        if(u) {
-            curU = u;
-            document.getElementById('login-page').style.display = 'none';
-            document.getElementById('app').style.display = 'block';
-            document.getElementById('userDisplay').innerText = `${u.CLIENT_NAME} (${u.CLIENT_CODE})`;
-        } else { 
-            document.getElementById('err').style.display = 'block'; 
-        }
-    }
-
-    function srch() {
-        const t = document.getElementById('search').value.toLowerCase();
-        if(t.length < 2) { document.getElementById('list').innerHTML = ''; return; }
-        const f = db.items.filter(x => 
-            (x.CODE && x.CODE.toString().toLowerCase().includes(t)) || 
-            (x.DESCRIPTION && x.DESCRIPTION.toLowerCase().includes(t))
-        ).slice(0, 30);
-        
-        document.getElementById('list').innerHTML = f.map(x => `
-            <div class="row" onclick="pick('${x.CODE}')">
-                <strong>${x.CODE}</strong><br><small>${x.DESCRIPTION}</small>
-            </div>
-        `).join('');
-    }
-
-    function pick(code) {
-        selI = db.items.find(x => x.CODE == code);
-        document.getElementById('selName').innerText = `${selI.CODE} - ${selI.DESCRIPTION}`;
-        document.getElementById('calcArea').style.display = 'block';
-        calc();
-    }
-
-    function calc() {
-        let rawPrice = selI['GROSS PRICE'] ? selI['GROSS PRICE'].toString().replace(/[^\d,.]/g, '').replace(',', '.') : "0";
-        const g = parseFloat(rawPrice) || 0;
-        const d = db.discounts[`${curU.CLIENT_CODE}-${selI.FAMILY}`] || {r1:0, r2:0};
-        const n = g * (1 - d.r1/100) * (1 - d.r2/100);
-        
-        document.getElementById('resGross').innerText = g.toFixed(2);
-        document.getElementById('resDisc').innerText = `${d.r1}% + ${d.r2}%`;
-        document.getElementById('selPrice').innerText = n.toFixed(2) + " €";
-        return n;
-    }
-
-    function add() {
-        const n = calc();
-        const q = parseInt(document.getElementById('qty').value) || 1;
-        cart.push({ code: selI.CODE, desc: selI.DESCRIPTION, qty: q, neto: n, total: n*q });
-        renderCart();
-    }
-
-    function renderCart() {
-        document.getElementById('cart').innerHTML = cart.map((x,i) => `
-            <tr>
-                <td><strong>${x.code}</strong><br><small>${x.desc}</small></td>
-                <td>${x.qty}</td>
-                <td>${x.neto.toFixed(2)} €</td>
-                <td style="font-weight:bold;">${x.total.toFixed(2)} €</td>
-                <td onclick="cart.splice(${i},1);renderCart()" style="color:red;cursor:pointer;font-weight:bold;">✕</td>
-            </tr>
-        `).join('');
-        document.getElementById('grand').innerText = cart.reduce((a,b) => a + b.total, 0).toFixed(2);
-    }
-
-    function exportPDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const dateStr =
+                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] =
