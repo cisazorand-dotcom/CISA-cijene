@@ -2,158 +2,169 @@
 <html lang="hr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CISA B2B Portal</title>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .login-card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 100%; max-width: 350px; }
-        .app-container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 900px; display: none; margin: 20px; }
-        .logo-img { width: 180px; height: auto; margin-bottom: 20px; }
-        input, select { width: 100%; padding: 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #ddd; box-sizing: border-box; font-size: 16px; }
-        .btn { background: #1a3a5f; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
-        .section { border: 1px solid #eee; padding: 15px; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
-        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
-        .total { font-size: 1.5em; font-weight: bold; color: #1a3a5f; text-align: right; margin-top: 15px; }
-        #status { color: #d35400; font-weight: bold; margin-bottom: 10px; font-size: 0.8em; }
-        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+        :root { --p: #1a3a5f; --s: #27ae60; --bg: #f4f7f9; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; }
+        .login-page { height: 100vh; display: flex; align-items: center; justify-content: center; width: 100%; }
+        .box { background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 340px; text-align: center; }
+        #app { display: none; width: 100%; max-width: 1100px; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px; box-sizing: border-box; font-size: 16px; }
+        .btn { background: var(--p); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 15px; font-size: 16px; }
+        .item-list { height: 350px; overflow-y: auto; border: 1px solid #eee; margin-top: 15px; border-radius: 8px; }
+        .row { padding: 12px; border-bottom: 1px solid #f8f9fa; cursor: pointer; text-align: left; }
+        .row:hover { background: #eef6ff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        .total-area { text-align: right; font-size: 24px; font-weight: bold; color: var(--p); padding: 20px; }
+        .loader { color: #666; font-size: 14px; margin-top: 10px; }
+        @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
-<div id="loginScreen" class="login-card">
-    <img src="CISA logo.JPG" alt="CISA Logo" class="logo-img" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/b/b3/Cisa_logo.svg'">
-    <h3>B2B Login</h3>
-    <input type="text" id="codeInput" placeholder="Klijentski kod">
-    <input type="password" id="passInput" placeholder="Lozinka">
-    <button class="btn" onclick="checkLogin()">PRIJAVI SE</button>
-    <p id="loginError" style="color: red; display: none; margin-top: 10px;">Pogrešni podaci!</p>
-</div>
-
-<div id="appScreen" class="app-container">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-        <div>
-            <img src="CISA logo.JPG" alt="Logo" style="height: 30px; vertical-align: middle;" onerror="this.style.display='none'">
-            <strong id="welcomeMsg" style="margin-left: 10px; color: #1a3a5f;"></strong>
-        </div>
-        <button onclick="location.reload()" style="background:none; border:none; color:#d35400; cursor:pointer; font-weight:bold;">Odjava</button>
-    </div>
-    
-    <div id="status">Povezivanje sa bazom...</div>
-
-    <div class="grid">
-        <div class="section">
-            <label>Pretraga artikla:</label>
-            <input type="text" id="itemSearch" placeholder="Šifra ili naziv..." oninput="filterItems()">
-            <select id="itemList" size="10" onchange="calculate()"></select>
-        </div>
-        <div class="section">
-            <p>Bruto: <strong id="outGross">0.00</strong> €</p>
-            <p>Rabati: <span id="outR1">0</span>% + <span id="outR2">0</span>%</p>
-            <label>Količina:</label>
-            <input type="number" id="qty" value="1" min="1" oninput="calculate()">
-            <h2 style="color: #27ae60;">Neto: <span id="outNet">0.00</span> €</h2>
-            <button class="btn" style="background:#27ae60;" onclick="addToCart()">DODAJ NA PONUDU</button>
+    <div id="login-page" class="login-page">
+        <div class="box">
+            <h3 style="color:var(--p);">CISA B2B Login</h3>
+            <div id="loading-db" class="loader">Povezivanje sa Google bazom...</div>
+            <div id="login-form" style="display:none;">
+                <input type="text" id="uCode" placeholder="Klijentski kod">
+                <input type="password" id="uPass" placeholder="Lozinka">
+                <button class="btn" onclick="login()">PRIJAVI SE</button>
+                <p id="err" style="color:red; display:none;">Pogrešan kod ili lozinka.</p>
+            </div>
         </div>
     </div>
 
-    <table id="cartTable">
-        <thead>
-            <tr><th>Šifra</th><th>Opis</th><th>Kol.</th><th>Neto</th><th>Ukupno</th><th></th></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <div class="total">UKUPNO: <span id="cartTotal">0.00</span> €</div>
-</div>
+    <div id="app">
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>Prijavljeni ste kao: <strong id="userDisplay"></strong></div>
+            <button onclick="location.reload()" style="background:none; border:none; color:red; cursor:pointer;">Odjava</button>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Pretraga artikala</h3>
+                <input type="text" id="search" placeholder="Šifra ili naziv..." oninput="srch()">
+                <div id="list" class="item-list"></div>
+            </div>
+
+            <div class="card">
+                <h3>Obračun</h3>
+                <div id="selName" style="font-weight:bold;">Odaberite artikal...</div>
+                <div id="calcArea" style="display:none; margin-top:15px;">
+                    <p>Bruto: <span id="resGross">0.00</span> €</p>
+                    <p>Vaši rabati: <span id="resDisc" style="color:var(--s);">0% + 0%</span></p>
+                    <div style="font-size:28px; color:var(--s); font-weight:bold;" id="selPrice">0.00 €</div>
+                    <input type="number" id="qty" value="1" min="1" oninput="calc()">
+                    <button class="btn" style="background:var(--s);" onclick="add()">DODAJ NA PONUDU</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Vaša Ponuda</h3>
+            <table>
+                <thead><tr><th>Šifra</th><th>Kol.</th><th>Neto</th><th>Ukupno</th><th></th></tr></thead>
+                <tbody id="cart"></tbody>
+            </table>
+            <div class="total-area">UKUPNO: <span id="grand">0.00</span> €</div>
+        </div>
+    </div>
 
 <script>
-    let dbPrice = [], dbDisc = {}, dbClients = [], cart = [], currentUser = null;
+    const SHEETS_URL = "https://script.google.com/macros/s/AKfycbzgExhJaKJtJTy6Q5wZIfs-fw6WpOGr1LIARRR2ZAnGW69cqp6Eh_w09t4FM64H7xG7/exec";
+    const BRUTO_URL = "CISA Bruto cijene 2026.xlsx - PriceLIstEUR39.csv";
+    
+    let db = { clients: [], items: [], discounts: {} }, curU = null, selI = null, cart = [];
 
     async function init() {
         try {
-            const res = await fetch('baza.xlsx');
-            if (!res.ok) throw new Error();
-            const data = await res.arrayBuffer();
-            const wb = XLSX.read(data, { type: 'array' });
+            const [resC, resD] = await Promise.all([
+                fetch(`${SHEETS_URL}?sheet=Klijenti`).then(r => r.json()),
+                fetch(`${SHEETS_URL}?sheet=Rabati`).then(r => r.json())
+            ]);
 
-            dbClients = XLSX.utils.sheet_to_json(wb.Sheets["Clients"]);
-            dbPrice = XLSX.utils.sheet_to_json(wb.Sheets["PriceLIstEUR39"]);
-            
-            const discData = XLSX.utils.sheet_to_json(wb.Sheets["Discounts"]);
-            discData.forEach(d => {
-                dbDisc[`${d.CLIENT_CODE}-${d.FAMILY}`] = { r1: d.BASIC_DISCOUNT, r2: d.DISCOUNT_2 };
+            db.clients = formatData(resC);
+            formatData(resD).forEach(x => {
+                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { r1: x.DISCOUNT1, r2: x.DISCOUNT2 };
             });
 
-            document.getElementById('status').innerText = "✅ Baza spremna.";
+            Papa.parse(BRUTO_URL, {
+                download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
+                complete: function(results) {
+                    db.items = results.data;
+                    document.getElementById('loading-db').style.display = 'none';
+                    document.getElementById('login-form').style.display = 'block';
+                }
+            });
         } catch (e) {
-            document.getElementById('status').innerText = "❌ Greška: baza.xlsx nije pronađena!";
+            console.error(e);
+            document.getElementById('loading-db').innerText = "Greška u bazi!";
         }
     }
 
-    function checkLogin() {
-        const code = document.getElementById('codeInput').value.trim();
-        const pass = document.getElementById('passInput').value.trim();
-        
-        // Tražimo klijenta po kodu i lozinki
-        const user = dbClients.find(c => 
-            c.CLIENT_CODE.toString() === code && 
-            (c.PASSWORD ? c.PASSWORD.toString() === pass : c.CLIENT_CODE.toString() === pass)
-        );
-
-        if (user) {
-            currentUser = user;
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('appScreen').style.display = 'block';
-            document.getElementById('welcomeMsg').innerText = user.CLIENT_NAME;
-            filterItems();
-        } else {
-            document.getElementById('loginError').style.display = 'block';
-        }
+    function formatData(arr) {
+        const h = arr[0];
+        return arr.slice(1).map(row => {
+            let o = {}; h.forEach((key, i) => o[key] = row[i]); return o;
+        });
     }
 
-    function filterItems() {
-        const term = document.getElementById('itemSearch').value.toLowerCase();
-        const filtered = dbPrice.filter(i => 
-            (i.CODE && i.CODE.toString().toLowerCase().includes(term)) || 
-            (i.DESCRIPTION && i.DESCRIPTION.toString().toLowerCase().includes(term))
-        ).slice(0, 50);
-        
-        document.getElementById('itemList').innerHTML = filtered.map(i => 
-            `<option value="${i.CODE}" data-price="${i['GROSS PRICE']}" data-family="${i.FAMILY}" data-desc="${i.DESCRIPTION}">${i.CODE} - ${i.DESCRIPTION}</option>`).join('');
+    function login() {
+        const c = document.getElementById('uCode').value;
+        const p = document.getElementById('uPass').value;
+        const u = db.clients.find(x => x.CLIENT_CODE.toString() == c && x.PASSWORD.toString() == p);
+        if(u) {
+            curU = u;
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            document.getElementById('userDisplay').innerText = u.NAME;
+        } else { document.getElementById('err').style.display = 'block'; }
     }
 
-    function calculate() {
-        const itemSel = document.getElementById('itemList');
-        if (itemSel.selectedIndex === -1) return;
-        const opt = itemSel.options[itemSel.selectedIndex];
-        const gross = parseFloat(opt.getAttribute('data-price')) || 0;
-        const family = opt.getAttribute('data-family');
-        
-        // Povlačenje rabata za ulogovanog korisnika
-        const disc = dbDisc[`${currentUser.CLIENT_CODE}-${family}`] || { r1: 50, r2: 0 };
-        const net = gross * (1 - disc.r1/100) * (1 - disc.r2/100);
-
-        document.getElementById('outGross').innerText = gross.toFixed(2);
-        document.getElementById('outR1').innerText = disc.r1;
-        document.getElementById('outR2').innerText = disc.r2;
-        document.getElementById('outNet').innerText = net.toFixed(2);
-        return { code: opt.value, desc: opt.getAttribute('data-desc'), net };
+    function srch() {
+        const t = document.getElementById('search').value.toLowerCase();
+        const f = db.items.filter(x => x.CODE && x.CODE.toString().toLowerCase().includes(t)).slice(0, 20);
+        document.getElementById('list').innerHTML = f.map(x => `
+            <div class="row" onclick="pick('${x.CODE}')">
+                <strong>${x.CODE}</strong><br><small>${x.DESCRIPTION || ''}</small>
+            </div>
+        `).join('');
     }
 
-    function addToCart() {
-        const res = calculate();
-        const qty = parseInt(document.getElementById('qty').value) || 1;
-        if(!res) return;
-        cart.push({ ...res, qty, total: res.net * qty });
+    function pick(code) {
+        selI = db.items.find(x => x.CODE == code);
+        document.getElementById('selName').innerText = selI.CODE + " - " + (selI.DESCRIPTION || "");
+        document.getElementById('calcArea').style.display = 'block';
+        calc();
+    }
+
+    function calc() {
+        const g = parseFloat(selI['GROSS PRICE']) || 0;
+        const d = db.discounts[`${curU.CLIENT_CODE}-${selI.FAMILY}`] || {r1:0, r2:0};
+        const n = g * (1 - d.r1/100) * (1 - d.r2/100);
+        document.getElementById('resGross').innerText = g.toFixed(2);
+        document.getElementById('resDisc').innerText = d.r1 + "% + " + d.r2 + "%";
+        document.getElementById('selPrice').innerText = n.toFixed(2) + " €";
+        return n;
+    }
+
+    function add() {
+        const n = calc(); const q = parseInt(document.getElementById('qty').value) || 1;
+        cart.push({ c: selI.CODE, q, n, t: n*q });
         renderCart();
     }
 
     function renderCart() {
-        const tbody = document.querySelector('#cartTable tbody');
-        tbody.innerHTML = cart.map((i, idx) => 
-            `<tr><td>${i.code}</td><td>${i.desc}</td><td>${i.qty}</td><td>${i.net.toFixed(2)}</td><td>${i.total.toFixed(2)}</td><td style="color:red; cursor:pointer" onclick="cart.splice(${idx},1);renderCart()">❌</td></tr>`).join('');
-        document.getElementById('cartTotal').innerText = cart.reduce((s, i) => s + i.total, 0).toFixed(2);
+        document.getElementById('cart').innerHTML = cart.map((x,i) => `
+            <tr><td>${x.c}</td><td>${x.q}</td><td>${x.n.toFixed(2)}</td><td>${x.t.toFixed(2)} €</td><td onclick="cart.splice(${i},1);renderCart()" style="color:red;cursor:pointer">✕</td></tr>
+        `).join('');
+        document.getElementById('grand').innerText = cart.reduce((a,b) => a + b.t, 0).toFixed(2);
     }
 
     window.onload = init;
