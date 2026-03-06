@@ -118,7 +118,7 @@
                         <tr>
                             <th id="th-code"></th><th id="th-desc"></th><th id="th-fam"></th>
                             <th id="th-bruto"></th><th id="th-r1"></th><th id="th-r2"></th>
-                            <th id="th-qty"></th><th id="th-total"></th><th></th>
+                            <th style="color:var(--s)">Neto</th><th id="th-qty"></th><th id="th-total"></th><th></th>
                         </tr>
                     </thead>
                     <tbody id="cart"></tbody>
@@ -133,7 +133,6 @@
     </div>
 
 <script>
-    // DODAT KORAK 1: Generalni rabati
     const FILES = { 
         clients: 'baza_Clients.csv', 
         discounts: 'baza_Discounts.csv', 
@@ -229,26 +228,19 @@
 
     async function init() {
         try {
-            // Učitavanje sve 4 baze
             const [cR, dR, pR, gR] = await Promise.all([
                 fetch(FILES.clients).then(r=>r.text()), 
                 fetch(FILES.discounts).then(r=>r.text()), 
                 fetch(FILES.prices).then(r=>r.text()),
                 fetch(FILES.general).then(r=>r.text())
             ]);
-            
             db.clients = Papa.parse(cR, {header:true, skipEmptyLines:true}).data;
-            
-            // Parsiranje specifičnih rabata
             Papa.parse(dR, {header:true, skipEmptyLines:true}).data.forEach(x => {
                 db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { r1: parseFloat(x.BASIC_DISCOUNT)||0, r2: parseFloat(x.DISCOUNT_2)||0 };
             });
-
-            // Parsiranje generalnih rabata
             Papa.parse(gR, {header:true, skipEmptyLines:true}).data.forEach(x => {
                 db.generalDiscounts[x.FAMILY] = { r1: parseFloat(x.BASIC_DISCOUNT)||0, r2: parseFloat(x.DISCOUNT_2)||0 };
             });
-
             db.items = Papa.parse(pR, {header:true, skipEmptyLines:true}).data;
             document.getElementById('status').style.display = 'none';
             document.getElementById('login-form').style.display = 'block';
@@ -294,26 +286,13 @@
     function calc() {
         let raw = selI['GROSS PRICE'] ? selI['GROSS PRICE'].toString().replace(/[^\d,.]/g, '').replace(',', '.') : "0";
         const g = parseFloat(raw) || 0;
-        
-        // 1. Nivo: Specifični popust
         let d = db.discounts[`${curU.CLIENT_CODE}-${selI.FAMILY}`];
-        
-        // 2. Nivo: Generalni popust za familiju
-        if (!d) {
-            d = db.generalDiscounts[selI.FAMILY];
-        }
-        
-        // 3. Nivo: Default 50%
-        if (!d) {
-            d = { r1: 50, r2: 0 };
-        }
-
+        if (!d) d = db.generalDiscounts[selI.FAMILY];
+        if (!d) d = { r1: 50, r2: 0 };
         const n = g * (1 - d.r1/100) * (1 - d.r2/100);
-        
         document.getElementById('resGross').innerText = g.toFixed(2);
         document.getElementById('resDisc').innerText = `${d.r1}% + ${d.r2}%`;
         document.getElementById('selPrice').innerText = n.toFixed(2) + " €";
-        
         return { neto: n, bruto: g, r1: d.r1, r2: d.r2 };
     }
 
@@ -344,6 +323,7 @@
                 <td>${x.gross.toFixed(2)} €</td>
                 <td>${x.r1}%</td>
                 <td>${x.r2}%</td>
+                <td style="color:var(--s); font-weight:bold;">${x.neto.toFixed(2)} €</td>
                 <td>
                     <button class="qty-btn" onclick="updateQty(${i},-1)">-</button>
                     <span style="margin:0 10px; font-weight:bold;">${x.qty}</span>
@@ -385,43 +365,43 @@
 
         doc.autoTable({
             startY: textStartY + 18,
-            head: [[t.thCode, t.thDesc, t.thFam, t.thBruto, t.thR1, t.thR2, t.thQty, t.thTotal]],
+            head: [[t.thCode, t.thDesc, t.thFam, t.thBruto, t.thR1, t.thR2, "Neto", t.thQty, t.thTotal]],
             body: cart.map(x => [
                 x.code, x.desc, x.family, x.gross.toFixed(2) + " €", 
-                x.r1 + "%", x.r2 + "%", x.qty, x.total.toFixed(2) + " €"
+                x.r1 + "%", x.r2 + "%", x.neto.toFixed(2) + " €", x.qty, x.total.toFixed(2) + " €"
             ]),
-            foot: [['', '', '', '', '', '', t.grandTotal + ":", document.getElementById('grand').innerText + " €"]],
-            styles: { font: "helvetica", fontStyle: "normal" },
+            foot: [['', '', '', '', '', '', '', t.grandTotal + ":", document.getElementById('grand').innerText + " €"]],
+            styles: { font: "helvetica", fontStyle: "normal", fontSize: 8 },
             headStyles: { fillColor: [26, 58, 95], fontSize: 9, halign: 'center' },
             columnStyles: { 
-                1: { cellWidth: 80 },
+                1: { cellWidth: 70 },
                 3: { halign: 'right' },
                 4: { halign: 'center' },
                 5: { halign: 'center' },
-                6: { halign: 'center' },
-                7: { halign: 'right', fontStyle: 'bold' }
+                6: { halign: 'right', fontStyle: 'bold' },
+                7: { halign: 'center' },
+                8: { halign: 'right', fontStyle: 'bold' }
             },
             didDrawPage: function (data) {
                 doc.setFontSize(8);
                 doc.setTextColor(100);
                 const footerTxt = "Kontakt osoba: Zoran Dragojevic, Agent & Technical Consultant for Balkans ; cisa.zoran.d@gmail.com ; +387 65 363 063";
-                const pageWidth = doc.internal.pageSize.width;
-                doc.text(footerTxt, pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+                doc.text(footerTxt, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
             }
         });
 
         const nTxt = document.getElementById('napomena').value;
         if(nTxt) {
             doc.setFontSize(10);
-            doc.text(t.noteLabel, 14, doc.lastAutoTable.finalY + 10);
+            doc.text("NAPOMENA:", 14, doc.lastAutoTable.finalY + 10);
             doc.text(doc.splitTextToSize(nTxt, 260), 14, doc.lastAutoTable.finalY + 17);
         }
         doc.save(`Ponuda_${curU.CLIENT_CODE}.pdf`);
     }
 
     function exportCSV() {
-        let csv = "\ufeff" + `Client: ${curU.CLIENT_NAME}\nDate: ${new Date().toLocaleDateString()}\n\nCode,Description,Family,Gross,R1,R2,Qty,Total\n`;
-        cart.forEach(x => { csv += `"${x.code}","${x.desc}","${x.family}",${x.gross.toFixed(2)},${x.r1},${x.r2},${x.qty},${x.total.toFixed(2)}\n`; });
+        let csv = "\ufeff" + `Client: ${curU.CLIENT_NAME}\nDate: ${new Date().toLocaleDateString()}\n\nCode,Description,Family,Gross,R1,R2,Neto,Qty,Total\n`;
+        cart.forEach(x => { csv += `"${x.code}","${x.desc}","${x.family}",${x.gross.toFixed(2)},${x.r1},${x.r2},${x.neto.toFixed(2)},${x.qty},${x.total.toFixed(2)}\n`; });
         const b = new Blob([csv], {type:'text/csv;charset=utf-8;'});
         const l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = "Ponuda.csv"; l.click();
     }
