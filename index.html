@@ -17,7 +17,6 @@
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .grid { display: grid; grid-template-columns: 1fr 400px; gap: 20px; }
         
-        /* Search container sa X dugmetom */
         .search-container { position: relative; width: 100%; margin-top: 10px; }
         .search-container input { padding-right: 40px; }
         .clear-btn { 
@@ -55,7 +54,7 @@
         <div class="box">
             <img src="CISA logo.JPG" class="logo-img" alt="CISA Logo">
             <div class="lang-switch">
-                <div class="lang-btn active" id="btn-sr" onclick="setLang('sr')">EX_YU</div>
+                <div class="lang-btn active" id="btn-sr" onclick="setLang('sr')">SRB</div>
                 <div class="lang-btn" id="btn-en" onclick="setLang('en')">ENG</div>
                 <div class="lang-btn" id="btn-it" onclick="setLang('it')">ITA</div>
             </div>
@@ -216,6 +215,7 @@
         document.getElementById('clearSearch').style.display = 'none';
         document.getElementById('calcArea').style.display = 'none';
         document.getElementById('selName').innerText = translations[curLang].selPh;
+        document.getElementById('qty').value = 1; // RESET KOLIČINE NA 1
         selI = null;
     }
 
@@ -292,7 +292,7 @@
             qty: q, total: res.neto * q 
         });
         renderCart();
-        clearInput(); // Resetuj sve nakon dodavanja
+        clearInput(); // Ovo sada resetuje i pretragu i količinu na 1
     }
 
     function renderCart() {
