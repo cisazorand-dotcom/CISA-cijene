@@ -16,7 +16,7 @@
         #app { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .grid { display: grid; grid-template-columns: 1fr 400px; gap: 20px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px; box-sizing: border-box; font-size: 16px; }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px; box-sizing: border-box; font-size: 16px; font-family: inherit; }
         .btn { border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 15px; font-size: 16px; transition: 0.3s; color: white; }
         .btn-p { background: var(--p); }
         .btn-s { background: var(--s); }
@@ -38,7 +38,7 @@
 
     <div id="login-page" class="login-page">
         <div class="box">
-          <img src="CISA logo.JPG" class="logo-img" alt="CISA Logo">
+            <img src="CISA logo.JPG" class="logo-img" alt="CISA Logo">
             <h3 style="color:var(--p); margin-top:0;">B2B Klijentski Portal</h3>
             <div id="status" class="loader">Učitavanje baza podataka...</div>
             <div id="login-form" style="display:none;">
@@ -100,7 +100,13 @@
                     <tbody id="cart"></tbody>
                 </table>
             </div>
+            
             <div class="total-area">UKUPNO: <span id="grand">0.00</span> €</div>
+            
+            <div style="margin-top: 10px; border-top: 1px dashed #ddd; padding-top: 15px;">
+                <label style="font-size: 13px; font-weight: bold; color: var(--p);">NAPOMENA:</label>
+                <textarea id="napomena" rows="2" placeholder="Unesite dodatne informacije (npr. rok isporuke, način plaćanja...)"></textarea>
+            </div>
         </div>
     </div>
 
@@ -112,6 +118,13 @@
     };
 
     let db = { clients: [], items: [], discounts: {} }, curU = null, selI = null, cart = [];
+
+    // Tvoji kontakt podaci za PDF
+    const MOJI_KONTAKTI = {
+        tel: "+387 XX XXX XXX",
+        email: "tvoj-email@cisa.com",
+        web: "www.cisa.com"
+    };
 
     async function init() {
         try {
@@ -210,49 +223,4 @@
     function exportPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        const dateStr = new Date().toLocaleDateString('hr-HR');
-        
-        // Logo i Zaglavlje
-        doc.setFontSize(22);
-        doc.setTextColor(26, 58, 95);
-        doc.text("CISA B2B PONUDA", 14, 20);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Datum: ${dateStr}`, 14, 28);
-        doc.text(`Klijent: ${curU.CLIENT_NAME}`, 14, 33);
-        doc.text(`Kod klijenta: ${curU.CLIENT_CODE}`, 14, 38);
-
-        const body = cart.map(x => [x.code, x.qty, x.neto.toFixed(2) + " €", x.total.toFixed(2) + " €"]);
-        
-        doc.autoTable({
-            startY: 45,
-            head: [['Sifra artikla', 'Kolicina', 'Neto kom', 'Ukupno']],
-            body: body,
-            foot: [['', '', 'UKUPNO:', document.getElementById('grand').innerText + " €"]],
-            headStyles: { fillColor: [26, 58, 95] },
-            footStyles: { fillColor: [240, 240, 240], textColor: [26, 58, 95], fontStyle: 'bold' }
-        });
-
-        doc.save(`Ponuda_${curU.CLIENT_CODE}_${dateStr}.pdf`);
-    }
-
-    function exportCSV() {
-        const dateStr = new Date().toLocaleDateString('hr-HR');
-        let csv = `Ponuda za: ${curU.CLIENT_NAME} (${curU.CLIENT_CODE})\nDatum: ${dateStr}\n\nSifra,Opis,Kolicina,Neto kom,Ukupno\n`;
-        cart.forEach(x => {
-            csv += `"${x.code}","${x.desc}",${x.qty},${x.neto.toFixed(2)},${x.total.toFixed(2)}\n`;
-        });
-        csv += `\n,,,UKUPNO:,${document.getElementById('grand').innerText}`;
-
-        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `Ponuda_${curU.CLIENT_CODE}.csv`;
-        link.click();
-    }
-
-    window.onload = init;
-</script>
-</body>
-</html>
+        const dateStr =
