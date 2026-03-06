@@ -275,11 +275,22 @@
 
     function calc() {
         let raw = selI['GROSS PRICE'] ? selI['GROSS PRICE'].toString().replace(/[^\d,.]/g, '').replace(',', '.') : "0";
-        const g = parseFloat(raw) || 0, d = db.discounts[`${curU.CLIENT_CODE}-${selI.FAMILY}`] || {r1:0, r2:0};
+        const g = parseFloat(raw) || 0;
+        
+        // Tražimo popust u bazi
+        let d = db.discounts[`${curU.CLIENT_CODE}-${selI.FAMILY}`];
+        
+        // AKO NE POSTOJI U BAZI, POSTAVLJAMO DEFAULT 50% + 0%
+        if (!d) {
+            d = { r1: 50, r2: 0 };
+        }
+
         const n = g * (1 - d.r1/100) * (1 - d.r2/100);
+        
         document.getElementById('resGross').innerText = g.toFixed(2);
         document.getElementById('resDisc').innerText = `${d.r1}% + ${d.r2}%`;
         document.getElementById('selPrice').innerText = n.toFixed(2) + " €";
+        
         return { neto: n, bruto: g, r1: d.r1, r2: d.r2 };
     }
 
