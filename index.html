@@ -10,7 +10,7 @@
     
     <style>
         :root { --p: #1a3a5f; --s: #27ae60; --bg: #f4f7f9; --accent: #e67e22; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
         .login-page { height: 100vh; display: flex; align-items: center; justify-content: center; width: 100%; }
         .box { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 350px; text-align: center; }
         #app { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
@@ -21,16 +21,13 @@
         .btn-p { background: var(--p); }
         .btn-s { background: var(--s); }
         .btn-a { background: var(--accent); }
-        .btn:hover { opacity: 0.9; transform: translateY(-2px); }
         .item-list { height: 400px; overflow-y: auto; border: 1px solid #eee; margin-top: 15px; border-radius: 8px; }
         .row { padding: 15px; border-bottom: 1px solid #f1f1f1; cursor: pointer; text-align: left; }
         .row:hover { background: #f0f7ff; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: #f8f9fa; color: var(--p); text-align: left; }
-        th, td { padding: 15px; border-bottom: 1px solid #eee; }
+        th, td { padding: 15px; border-bottom: 1px solid #eee; text-align: left; }
         .total-area { text-align: right; font-size: 28px; font-weight: bold; color: var(--p); padding: 25px 0; }
-        .logo-img { width: 160px; margin-bottom: 20px; }
-        .loader { color: #888; font-size: 14px; margin-top: 15px; }
+        .logo-img { width: 200px; height: auto; margin-bottom: 20px; }
         @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -38,19 +35,82 @@
 
     <div id="login-page" class="login-page">
         <div class="box">
-            <img src="https://www.cisa.com/content/dam/cisa/logos/cisa-logo.png" class="logo-img" alt="CISA Logo">
-            <h3 style="color:var(--p); margin-top:0;">B2B Klijentski Portal</h3>
-            <div id="status" class="loader">Učitavanje baza podataka...</div>
+            <img src="CISA logo.JPG" class="logo-img" alt="CISA Logo">
+            <h3 style="color:var(--p); margin-top:0;">B2B Portal</h3>
+            <div id="status">Učitavanje podataka...</div>
             <div id="login-form" style="display:none;">
                 <input type="text" id="uCode" placeholder="Klijentski kod">
                 <input type="password" id="uPass" placeholder="Lozinka">
                 <button class="btn btn-p" onclick="login()">PRIJAVI SE</button>
-                <p id="err" style="color:red; display:none; margin-top:15px; font-size:14px;">Pogrešni podaci za prijavu.</p>
+                <p id="err" style="color:red; display:none; margin-top:15px;">Pogrešni podaci.</p>
             </div>
         </div>
     </div>
 
     <div id="app">
-        <div class="card" style="display:flex; justify-content:space-between; align-items:center; border-left: 5px solid var(--p);">
-            <div>Prijavljeni ste kao: <strong id="userDisplay" style="color:var(--p);"></strong></div>
-            <button onclick="location.reload()" style="background:none; border:none; color:#
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+            <img src="CISA logo.JPG" style="height:40px;" alt="Logo">
+            <div>Klijent: <strong id="userDisplay" style="color:var(--p);"></strong></div>
+            <button onclick="location.reload()" style="background:none; border:none; color:red; cursor:pointer; font-weight:bold;">Odjava ✕</button>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Pretraga artikala</h3>
+                <input type="text" id="search" placeholder="Šifra ili opis..." oninput="srch()">
+                <div id="list" class="item-list"></div>
+            </div>
+
+            <div class="card">
+                <h3>Obračun</h3>
+                <div id="selName" style="font-weight:bold; min-height:50px;">Odaberite artikal...</div>
+                <div id="calcArea" style="display:none;">
+                    <p>Bruto: <span id="resGross">0.00</span> €</p>
+                    <p>Rabati: <span id="resDisc" style="color:var(--s); font-weight:bold;">0% + 0%</span></p>
+                    <div style="font-size:32px; color:var(--s); font-weight:bold; margin:10px 0;" id="selPrice">0.00 €</div>
+                    <input type="number" id="qty" value="1" min="1" oninput="calc()">
+                    <button class="btn btn-s" onclick="add()">DODAJ NA PONUDU</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3>Ponuda</h3>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-a" style="margin:0; width:auto; padding:10px 20px;" onclick="exportPDF()">PDF EXPORT</button>
+                    <button class="btn btn-p" style="margin:0; width:auto; padding:10px 20px;" onclick="exportCSV()">EXCEL EXPORT</button>
+                </div>
+            </div>
+            <table>
+                <thead><tr><th>Artikal</th><th>Količina</th><th>Neto</th><th>Ukupno</th><th></th></tr></thead>
+                <tbody id="cart"></tbody>
+            </table>
+            <div class="total-area">UKUPNO: <span id="grand">0.00</span> €</div>
+        </div>
+    </div>
+
+<script>
+    const FILES = {
+        clients: 'baza_Clients.csv',
+        discounts: 'baza_Discounts.csv',
+        prices: 'baza_PriceListEUR39.csv'
+    };
+
+    let db = { clients: [], items: [], discounts: {} }, curU = null, selI = null, cart = [];
+
+    async function init() {
+        try {
+            const [cRes, dRes, pRes] = await Promise.all([
+                fetch(FILES.clients).then(r => r.text()),
+                fetch(FILES.discounts).then(r => r.text()),
+                fetch(FILES.prices).then(r => r.text())
+            ]);
+            db.clients = Papa.parse(cRes, { header: true, skipEmptyLines: true }).data;
+            Papa.parse(dRes, { header: true, skipEmptyLines: true }).data.forEach(x => {
+                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { r1: parseFloat(x.BASIC_DISCOUNT)||0, r2: parseFloat(x.DISCOUNT_2)||0 };
+            });
+            db.items = Papa.parse(pRes, { header: true, skipEmptyLines: true }).data;
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+        } catch (e) { document.getElementById('status').innerText = "Greška u
