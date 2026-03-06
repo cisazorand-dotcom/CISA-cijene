@@ -48,7 +48,7 @@
                 <div class="lang-btn" id="btn-it" onclick="setLang('it')">ITA</div>
             </div>
             <h3 id="t-welcome" style="color:var(--p); margin-top:0;">B2B Klijentski Portal</h3>
-            <div id="status" class="loader">Učitavanje podataka...</div>
+            <div id="status" class="loader">Učitavanje...</div>
             <div id="login-form" style="display:none;">
                 <input type="text" id="uCode" placeholder="Kod klijenta">
                 <input type="password" id="uPass" placeholder="Lozinka">
@@ -128,7 +128,8 @@
             gross: "Bruto cena", disc: "Vaši rabati", qtyLabel: "Količina za ponudu:", addBtn: "DODAJ NA PONUDU",
             offerTitle: "Vaša Ponuda / Specifikacija", thCode: "Šifra artikla", thQty: "Količina", thNeto: "Neto kom",
             thTotal: "Ukupno", grandTotal: "UKUPNO", noteLabel: "NAPOMENA:", selPh: "Odaberite artikal iz liste...",
-            pdfTitle: "CISA B2B PONUDA", pdfClient: "Klijent", pdfCode: "Kod klijenta", pdfDate: "Datum"
+            pdfTitle: "CISA B2B PONUDA", pdfClient: "Klijent", pdfCode: "Kod klijenta", pdfDate: "Datum",
+            uCodePh: "Kod klijenta", uPassPh: "Lozinka", loginErr: "Pogrešni podaci."
         },
         en: {
             welcome: "B2B Client Portal", loginBtn: "LOGIN", loggedAs: "Logged in as:", logout: "LOGOUT ✕",
@@ -136,7 +137,8 @@
             gross: "Gross Price", disc: "Your Discounts", qtyLabel: "Quantity for offer:", addBtn: "ADD TO OFFER",
             offerTitle: "Your Offer / Specification", thCode: "Item Code", thQty: "Quantity", thNeto: "Net Price",
             thTotal: "Total", grandTotal: "GRAND TOTAL", noteLabel: "NOTES:", selPh: "Select item from list...",
-            pdfTitle: "CISA B2B QUOTATION", pdfClient: "Client", pdfCode: "Client Code", pdfDate: "Date"
+            pdfTitle: "CISA B2B QUOTATION", pdfClient: "Client", pdfCode: "Client Code", pdfDate: "Date",
+            uCodePh: "Client Code", uPassPh: "Password", loginErr: "Invalid credentials."
         },
         it: {
             welcome: "Portale Clienti B2B", loginBtn: "ACCEDI", loggedAs: "Accesso effettuato come:", logout: "LOGOUT ✕",
@@ -144,7 +146,8 @@
             gross: "Prezzo Lordo", disc: "I Tuoi Sconti", qtyLabel: "Quantità per offerta:", addBtn: "AGGIUNGI ALL'OFFERTA",
             offerTitle: "Tua Offerta / Specifica", thCode: "Codice Articolo", thQty: "Quantità", thNeto: "Prezzo Netto",
             thTotal: "Totale", grandTotal: "TOTALE GENERALE", noteLabel: "NOTE:", selPh: "Seleziona un articolo...",
-            pdfTitle: "CISA B2B PREVENTIVO", pdfClient: "Cliente", pdfCode: "Codice Cliente", pdfDate: "Data"
+            pdfTitle: "CISA B2B PREVENTIVO", pdfClient: "Cliente", pdfCode: "Codice Cliente", pdfDate: "Data",
+            uCodePh: "Codice Cliente", uPassPh: "Password", loginErr: "Dati non validi."
         }
     };
 
@@ -160,126 +163,4 @@
         document.getElementById('t-welcome').innerText = t.welcome;
         document.getElementById('t-loginBtn').innerText = t.loginBtn;
         document.getElementById('t-loggedAs').innerText = t.loggedAs;
-        document.getElementById('t-logout').innerText = t.logout;
-        document.getElementById('t-searchTitle').innerText = t.searchTitle;
-        document.getElementById('search').placeholder = t.searchPh;
-        document.getElementById('t-calcTitle').innerText = t.calcTitle;
-        if(!selI) document.getElementById('selName').innerText = t.selPh;
-        document.getElementById('t-gross').innerText = t.gross;
-        document.getElementById('t-disc').innerText = t.disc;
-        document.getElementById('t-qtyLabel').innerText = t.qtyLabel;
-        document.getElementById('t-addBtn').innerText = t.addBtn;
-        document.getElementById('t-offerTitle').innerText = t.offerTitle;
-        document.getElementById('th-code').innerText = t.thCode;
-        document.getElementById('th-qty').innerText = t.thQty;
-        document.getElementById('th-neto').innerText = t.thNeto;
-        document.getElementById('th-total').innerText = t.thTotal;
-        document.getElementById('t-grandTotal').innerText = t.grandTotal;
-        document.getElementById('t-noteLabel').innerText = t.noteLabel;
-    }
-
-    async function init() {
-        try {
-            const [cR, dR, pR] = await Promise.all([fetch(FILES.clients).then(r=>r.text()), fetch(FILES.discounts).then(r=>r.text()), fetch(FILES.prices).then(r=>r.text())]);
-            db.clients = Papa.parse(cR, {header:true, skipEmptyLines:true}).data;
-            Papa.parse(dR, {header:true, skipEmptyLines:true}).data.forEach(x => {
-                db.discounts[`${x.CLIENT_CODE}-${x.FAMILY}`] = { r1: parseFloat(x.BASIC_DISCOUNT)||0, r2: parseFloat(x.DISCOUNT_2)||0 };
-            });
-            db.items = Papa.parse(pR, {header:true, skipEmptyLines:true}).data;
-            document.getElementById('status').style.display = 'none';
-            document.getElementById('login-form').style.display = 'block';
-            updateUI();
-        } catch (e) { document.getElementById('status').innerText = "Greška u učitavanju baza!"; }
-    }
-
-    function login() {
-        const c = document.getElementById('uCode').value.trim(), p = document.getElementById('uPass').value.trim();
-        const u = db.clients.find(x => x.CLIENT_CODE == c && x.PASSWORD == p);
-        if(u) {
-            curU = u; document.getElementById('login-page').style.display = 'none';
-            document.getElementById('app').style.display = 'block';
-            document.getElementById('userDisplay').innerText = `${u.CLIENT_NAME} (${u.CLIENT_CODE})`;
-        } else { document.getElementById('err').style.display = 'block'; }
-    }
-
-    function logout() {
-        curU = null; cart = []; renderCart();
-        document.getElementById('search').value = ''; document.getElementById('list').innerHTML = '';
-        document.getElementById('calcArea').style.display = 'none';
-        document.getElementById('uCode').value = ''; document.getElementById('uPass').value = '';
-        document.getElementById('app').style.display = 'none'; document.getElementById('login-page').style.display = 'flex';
-    }
-
-    function srch() {
-        const t = document.getElementById('search').value.toLowerCase();
-        if(t.length < 2) { document.getElementById('list').innerHTML = ''; return; }
-        const f = db.items.filter(x => (x.CODE && x.CODE.toString().toLowerCase().includes(t)) || (x.DESCRIPTION && x.DESCRIPTION.toLowerCase().includes(t))).slice(0, 30);
-        document.getElementById('list').innerHTML = f.map(x => `<div class="row" onclick="pick('${x.CODE}')"><strong>${x.CODE}</strong><br><small>${x.DESCRIPTION}</small></div>`).join('');
-    }
-
-    function pick(code) {
-        selI = db.items.find(x => x.CODE == code);
-        document.getElementById('selName').innerText = `${selI.CODE} - ${selI.DESCRIPTION}`;
-        document.getElementById('calcArea').style.display = 'block';
-        calc();
-    }
-
-    function calc() {
-        let raw = selI['GROSS PRICE'] ? selI['GROSS PRICE'].toString().replace(/[^\d,.]/g, '').replace(',', '.') : "0";
-        const g = parseFloat(raw) || 0, d = db.discounts[`${curU.CLIENT_CODE}-${selI.FAMILY}`] || {r1:0, r2:0};
-        const n = g * (1 - d.r1/100) * (1 - d.r2/100);
-        document.getElementById('resGross').innerText = g.toFixed(2);
-        document.getElementById('resDisc').innerText = `${d.r1}% + ${d.r2}%`;
-        document.getElementById('selPrice').innerText = n.toFixed(2) + " €";
-        return n;
-    }
-
-    function add() {
-        const n = calc(), q = parseInt(document.getElementById('qty').value) || 1;
-        cart.push({ code: selI.CODE, desc: selI.DESCRIPTION, qty: q, neto: n, total: n*q });
-        renderCart();
-    }
-
-    function renderCart() {
-        document.getElementById('cart').innerHTML = cart.map((x,i) => `<tr><td><strong>${x.code}</strong><br><small>${x.desc}</small></td><td>${x.qty}</td><td>${x.neto.toFixed(2)} €</td><td>${x.total.toFixed(2)} €</td><td onclick="cart.splice(${i},1);renderCart()" style="color:red;cursor:pointer;">✕</td></tr>`).join('');
-        document.getElementById('grand').innerText = cart.reduce((a,b) => a + b.total, 0).toFixed(2);
-    }
-
-    function exportPDF() {
-        const { jsPDF } = window.jspdf; const doc = new jsPDF();
-        const t = translations[curLang]; const dateStr = new Date().toLocaleDateString();
-        
-        doc.setFontSize(20); doc.setTextColor(26, 58, 95); doc.text(t.pdfTitle, 14, 20);
-        doc.setFontSize(10); doc.setTextColor(50);
-        doc.text(`${t.pdfDate}: ${dateStr}`, 14, 30);
-        doc.text(`${t.pdfClient}: ${curU.CLIENT_NAME}`, 14, 35);
-        doc.text(`${t.pdfCode}: ${curU.CLIENT_CODE}`, 14, 40);
-
-        doc.autoTable({
-            startY: 45,
-            head: [[t.thCode, t.thQty, t.thNeto, t.thTotal]],
-            body: cart.map(x => [x.code, x.qty, x.neto.toFixed(2) + " €", x.total.toFixed(2) + " €"]),
-            foot: [['', '', t.grandTotal + ":", document.getElementById('grand').innerText + " €"]],
-            headStyles: { fillColor: [26, 58, 95] }
-        });
-
-        const nTxt = document.getElementById('napomena').value;
-        if(nTxt) {
-            doc.text(t.noteLabel, 14, doc.lastAutoTable.finalY + 10);
-            doc.setFont("helvetica", "normal");
-            doc.text(doc.splitTextToSize(nTxt, 180), 14, doc.lastAutoTable.finalY + 17);
-        }
-        doc.save(`Ponuda_${curU.CLIENT_CODE}.pdf`);
-    }
-
-    function exportCSV() {
-        let csv = "\ufeff" + `Client: ${curU.CLIENT_NAME}\nDate: ${new Date().toLocaleDateString()}\n\nCode,Qty,Price,Total\n`;
-        cart.forEach(x => { csv += `${x.code},${x.qty},${x.neto.toFixed(2)},${x.total.toFixed(2)}\n`; });
-        const b = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-        const l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = "Offer.csv"; l.click();
-    }
-
-    window.onload = init;
-</script>
-</body>
-</html>
+        document
