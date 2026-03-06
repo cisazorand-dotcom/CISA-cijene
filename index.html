@@ -403,9 +403,9 @@
             },
             // Footer na svakoj stranici
             didDrawPage: function (data) {
-                doc.setFontSize(9);
+                doc.setFontSize(8);
                 doc.setTextColor(100);
-                const footerTxt = "Kontakt osoba: Zoran Dragojević ; cisa.zoran.d@gmail.com ; +387 65 363 063";
+                const footerTxt = "Kontakt osoba: Zoran Dragojevic, Agent & Technical Consultant for Balkans ; cisa.zoran.d@gmail.com ; +387 65 363 063";
                 const pageSize = doc.internal.pageSize;
                 const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth();
                 const textWidth = doc.getTextWidth(footerTxt);
