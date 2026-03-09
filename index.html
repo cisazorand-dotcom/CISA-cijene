@@ -335,11 +335,18 @@
         document.getElementById('grand').innerText = cart.reduce((a,b) => a + b.total, 0).toFixed(2);
     }
 
-    function exportPDF() {
+function exportPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }); 
         const t = translations[curLang];
-        const dateStr = new Date().toLocaleDateString('sr-RS'); 
+        
+        // Formatiranje datuma i vremena za naziv fajla
+        const sada = new Date();
+        const datumFajl = sada.toLocaleDateString('sr-RS').replace(/\./g, '-');
+        const vrijemeFajl = sada.getHours() + '-' + sada.getMinutes();
+        const puniNazivFajla = `Ponuda_${curU.CLIENT_NAME}_${curU.CLIENT_CODE}_${datumFajl}_${vrijemeFajl}.pdf`.replace(/\s+/g, '_');
+
+        const dateStr = sada.toLocaleDateString('sr-RS') + " " + sada.getHours() + ":" + sada.getMinutes().toString().padStart(2, '0'); 
         const img = document.getElementById('pdfLogoSource');
         
         if (img && img.complete && img.naturalWidth > 0) {
@@ -390,13 +397,23 @@
             }
         });
 
-        const nTxt = document.getElementById('napomena').value;
+        // POPRAVLJENO: Uzimanje napomene direktno iz textarea
+        const nTxt = document.getElementById('napomena').value.trim();
         if(nTxt) {
+            const finalY = doc.lastAutoTable.finalY || textStartY + 20;
             doc.setFontSize(10);
-            doc.text("NAPOMENA:", 14, doc.lastAutoTable.finalY + 10);
-            doc.text(doc.splitTextToSize(nTxt, 260), 14, doc.lastAutoTable.finalY + 17);
+            doc.setTextColor(26, 58, 95);
+            doc.setFont("helvetica", "bold");
+            doc.text("NAPOMENA:", 14, finalY + 10);
+            
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(50);
+            // splitTextToSize omogućava da se dugačka napomena prelomi u više redova
+            const splitLines = doc.splitTextToSize(nTxt, 260); 
+            doc.text(splitLines, 14, finalY + 16);
         }
-        doc.save(`Ponuda_${curU.CLIENT_CODE}.pdf`);
+        
+        doc.save(puniNazivFajla);
     }
 
     function exportCSV() {
