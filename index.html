@@ -340,7 +340,7 @@ function exportPDF() {
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' }); 
         const t = translations[curLang];
         
-        // Formatiranje datuma i vremena za naziv fajla
+        // Naziv fajla sa klijentom i vremenom
         const sada = new Date();
         const datumFajl = sada.toLocaleDateString('sr-RS').replace(/\./g, '-');
         const vrijemeFajl = sada.getHours() + '-' + sada.getMinutes();
@@ -348,37 +348,41 @@ function exportPDF() {
 
         const dateStr = sada.toLocaleDateString('sr-RS') + " " + sada.getHours() + ":" + sada.getMinutes().toString().padStart(2, '0'); 
         const img = document.getElementById('pdfLogoSource');
-        
-        if (img && img.complete && img.naturalWidth > 0) {
-            const aspectRatio = img.naturalWidth / img.naturalHeight;
-            const pdfImgWidth = 45; 
-            const pdfImgHeight = pdfImgWidth / aspectRatio; 
-            doc.addImage(img, 'JPEG', 14, 10, pdfImgWidth, pdfImgHeight);
-            var textStartY = 10 + pdfImgHeight + 10; 
-        } else {
-            var textStartY = 20;
-        }
 
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(18);
-        doc.setTextColor(26, 58, 95); 
-        doc.text(t.pdfTitle, 14, textStartY);
+        // Funkcija za crtanje headera na svakoj stranici
+        const drawHeader = (data) => {
+            if (img && img.complete && img.naturalWidth > 0) {
+                const aspectRatio = img.naturalWidth / img.naturalHeight;
+                const pdfImgWidth = 40; 
+                const pdfImgHeight = pdfImgWidth / aspectRatio; 
+                doc.addImage(img, 'JPEG', 14, 10, pdfImgWidth, pdfImgHeight);
+            }
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(50);
-        doc.text(`${t.pdfDate}: ${dateStr}`, 14, textStartY + 8);
-        doc.text(`${t.pdfClient}: ${curU.CLIENT_NAME} (${curU.CLIENT_CODE})`, 14, textStartY + 13);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.setTextColor(26, 58, 95); 
+            doc.text(t.pdfTitle, 60, 15);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(50);
+            doc.text(`${t.pdfClient}: ${curU.CLIENT_NAME} (${curU.CLIENT_CODE})`, 60, 20);
+            doc.text(`${t.pdfDate}: ${dateStr}`, 60, 25);
+            
+            // Linija razdvajanja ispod headera
+            doc.setDrawColor(230, 230, 230);
+            doc.line(14, 32, 283, 32);
+        };
 
         doc.autoTable({
-            startY: textStartY + 18,
+            startY: 35,
             head: [[t.thCode, t.thDesc, t.thFam, t.thBruto, t.thR1, t.thR2, "Neto", t.thQty, t.thTotal]],
             body: cart.map(x => [
                 x.code, x.desc, x.family, x.gross.toFixed(2) + " €", 
                 x.r1 + "%", x.r2 + "%", x.neto.toFixed(2) + " €", x.qty, x.total.toFixed(2) + " €"
             ]),
             foot: [['', '', '', '', '', '', '', t.grandTotal + ":", document.getElementById('grand').innerText + " €"]],
-            styles: { font: "helvetica", fontStyle: "normal", fontSize: 8 },
+            styles: { font: "helvetica", fontSize: 8, cellPadding: 2 },
             headStyles: { fillColor: [26, 58, 95], fontSize: 9, halign: 'center' },
             columnStyles: { 
                 1: { cellWidth: 70 },
@@ -389,28 +393,42 @@ function exportPDF() {
                 7: { halign: 'center' },
                 8: { halign: 'right', fontStyle: 'bold' }
             },
+            margin: { top: 35 }, // Ostavljamo prostor za header na svakoj strani
             didDrawPage: function (data) {
+                // Pozovi header
+                drawHeader(data);
+                
+                // Broj stranice na dnu desno
+                const pageCount = doc.internal.getNumberOfPages();
                 doc.setFontSize(8);
                 doc.setTextColor(100);
-                const footerTxt = "Kontakt osoba: Zoran Dragojevic, Agent & Technical Consultant for Balkans ; cisa.zoran.d@gmail.com ; +387 65 363 063";
+                const str = (curLang === 'it' ? 'Pagina' : (curLang === 'en' ? 'Page' : 'Strana'));
+                doc.text(str + " " + data.pageNumber, 270, doc.internal.pageSize.height - 10, { align: 'right' });
+                
+                // Footer text na dnu centra
+                const footerTxt = "Zoran Dragojevic, Agent & Technical Consultant for Balkans ; cisa.zoran.d@gmail.com ; +387 65 363 063";
                 doc.text(footerTxt, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
             }
         });
 
-        // POPRAVLJENO: Uzimanje napomene direktno iz textarea
+        // Napomena se dodaje samo na kraj dokumenta
         const nTxt = document.getElementById('napomena').value.trim();
         if(nTxt) {
-            const finalY = doc.lastAutoTable.finalY || textStartY + 20;
+            const finalY = doc.lastAutoTable.finalY;
+            // Ako nema mjesta na dnu, dodaj novu stranu za napomenu
+            if (finalY > 170) doc.addPage();
+            
+            const startY = (finalY > 170) ? 40 : finalY + 10;
+            
             doc.setFontSize(10);
             doc.setTextColor(26, 58, 95);
             doc.setFont("helvetica", "bold");
-            doc.text("NAPOMENA:", 14, finalY + 10);
+            doc.text("NAPOMENA:", 14, startY);
             
             doc.setFont("helvetica", "normal");
             doc.setTextColor(50);
-            // splitTextToSize omogućava da se dugačka napomena prelomi u više redova
             const splitLines = doc.splitTextToSize(nTxt, 260); 
-            doc.text(splitLines, 14, finalY + 16);
+            doc.text(splitLines, 14, startY + 6);
         }
         
         doc.save(puniNazivFajla);
