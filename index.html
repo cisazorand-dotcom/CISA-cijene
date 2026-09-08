@@ -133,11 +133,12 @@
     </div>
 
 <script>
+    const cb = '?v=' + Date.now();
     const FILES = { 
-        clients: 'baza_Clients.csv', 
-        discounts: 'baza_Discounts.csv', 
-        prices: 'baza_PriceListEUR39.csv',
-        general: 'baza_GeneralDiscounts.csv' 
+        clients: 'baza_Clients.csv' + cb, 
+        discounts: 'baza_Discounts.csv' + cb, 
+        prices: 'baza_PriceListEUR39.csv' + cb,
+        general: 'baza_GeneralDiscounts.csv' + cb 
     };
     
     let db = { clients: [], items: [], discounts: {}, generalDiscounts: {} }, curU = null, selI = null, cart = [], curLang = 'sr';
